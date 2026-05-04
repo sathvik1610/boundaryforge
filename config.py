@@ -10,16 +10,20 @@ Critical failure types to aggressively target:
 - Missing clarification on ambiguous requests
 """
 
-PROBE_COUNT = 2500
-BATCH_SIZE = 50
-K_RUNS = 3 
+# --- TESTING PARAMETERS (Increase these back to 2500 for the final run!) ---
+PROBE_COUNT = 2
+BATCH_SIZE = 1
+K_RUNS = 1 
 
-MODEL_A = "Qwen/Qwen2.5-72B-Instruct"
-MODEL_B = "mistralai/Mistral-7B-Instruct-v0.3"
 
-# Local vLLM Endpoints for CrewAI
-LOCAL_LLM_URL = "http://localhost:8001/v1"
-LOCAL_API_KEY = "sk-dummy"
+MODEL_A = os.getenv("MODEL_A", "gemini-2.5-flash")
+MODEL_B = os.getenv("MODEL_B", "gemini-1.5-pro")
+
+# Local vLLM or External API Endpoints
+# For final AMD run: "http://localhost:8001/v1"
+# For Gemini testing: "https://generativelanguage.googleapis.com/v1beta/openai/"
+LOCAL_LLM_URL = os.getenv("API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/") 
+LOCAL_API_KEY = os.getenv("API_KEY", "AIzaSyCur4CQPvrZB3Hhz8mLlWi1o40ex3SHRxA")
 
 BOUNDARY_THRESHOLD = 0.5
 TOP_RULES = 7

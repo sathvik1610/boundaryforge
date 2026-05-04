@@ -6,14 +6,15 @@ from engine.signal_extractor import extract_boundaries
 from crews.compilation_crew import run_compilation_crew
 from engine.middleware import BoundaryForgeMiddleware
 from engine.metrics import run_validation
+from config import PROBE_COUNT
 
 def run_boundary_forge():
     print("=== BOUNDARY FORGE INITIALIZED ===")
     
     print("\n[1] CrewAI Generating Probes...")
-    probes = generate_probes(total=2500)
+    probes = generate_probes(total=PROBE_COUNT)
     random.shuffle(probes)
-    train, test = probes[:1500], probes[1500:] # Use 200 for fast validation
+    train, test = probes[:max(1, len(probes)//2)], probes[max(1, len(probes)//2):] # dynamic split for testing
     
     print("\n[2] AMD MI300X Batch Inference...")
     results = run_all_probes(train)

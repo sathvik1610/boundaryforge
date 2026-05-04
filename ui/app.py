@@ -8,6 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.middleware import BoundaryForgeMiddleware
+from config import LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A
 
 # ===== LOAD DATA =====
 def load_data():
@@ -33,8 +34,8 @@ def load_data():
 metrics, contract = load_data()
 middleware = BoundaryForgeMiddleware(contract_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")) if contract else None
 
-# OpenAI client (local vLLM)
-client = OpenAI(base_url="http://localhost:8001/v1", api_key="sk-dummy")
+# OpenAI client (Using config settings)
+client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
 
 
 # ===== CORE FUNCTIONS =====
@@ -56,7 +57,7 @@ def compare(query):
     # Baseline (no contract)
     try:
         base = client.chat.completions.create(
-            model="Qwen/Qwen2.5-72B-Instruct",
+            model=MODEL_A,
             messages=[{"role": "user", "content": query}],
             temperature=0.3,
             max_tokens=300
@@ -78,7 +79,7 @@ def compare(query):
 
 # ===== UI =====
 
-with gr.Blocks(title="Boundary Forge", theme=gr.themes.Monochrome()) as demo:
+with gr.Blocks(title="Boundary Forge") as demo:
 
     gr.Markdown("""
     # 🛡️ Boundary Forge
@@ -145,4 +146,4 @@ with gr.Blocks(title="Boundary Forge", theme=gr.themes.Monochrome()) as demo:
 
 # ===== RUN APP =====
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch(share=True, theme=gr.themes.Monochrome())

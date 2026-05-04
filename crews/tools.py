@@ -1,5 +1,5 @@
 import json
-from langchain.tools import tool
+from crewai.tools import tool
 
 @tool("Contract Conflict Resolver")
 def conflict_resolver_tool(rules_json: str) -> str:

@@ -1,11 +1,11 @@
 import json
 from crewai import Agent, Task, Crew, Process
-from langchain_openai import ChatOpenAI
+from crewai import LLM
 from crews.tools import conflict_resolver_tool
-from config import LOCAL_LLM_URL, LOCAL_API_KEY, TOP_RULES
+from config import LOCAL_LLM_URL, LOCAL_API_KEY, TOP_RULES, MODEL_A
 
-llm = ChatOpenAI(
-    model="Qwen/Qwen2.5-72B-Instruct",
+llm = LLM(
+    model=f"openai/{MODEL_A}",
     base_url=LOCAL_LLM_URL,
     api_key=LOCAL_API_KEY,
     temperature=0.1
@@ -66,7 +66,7 @@ STRICT JSON ONLY:
         agents=[miner, compiler],
         tasks=[mine_task, compile_task],
         process=Process.sequential,
-        memory=True
+        memory=False
     )
 
     result = crew.kickoff()
