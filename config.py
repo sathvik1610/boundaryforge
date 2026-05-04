@@ -16,14 +16,14 @@ BATCH_SIZE = 1
 K_RUNS = 1 
 
 
-MODEL_A = os.getenv("MODEL_A", "gemini-2.5-flash")
-MODEL_B = os.getenv("MODEL_B", "gemini-1.5-pro")
+MODEL_A = os.getenv("MODEL_A", "Qwen/Qwen2.5-72B-Instruct")
+MODEL_B = os.getenv("MODEL_B", "meta-llama/Meta-Llama-3-8B-Instruct")
 
 # Local vLLM or External API Endpoints
 # For final AMD run: "http://localhost:8001/v1"
-# For Gemini testing: "https://generativelanguage.googleapis.com/v1beta/openai/"
-LOCAL_LLM_URL = os.getenv("API_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/") 
-LOCAL_API_KEY = os.getenv("API_KEY", "AIzaSyCur4CQPvrZB3Hhz8mLlWi1o40ex3SHRxA")
+# For Hugging Face testing: "https://api-inference.huggingface.co/v1/"
+LOCAL_LLM_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1/") 
+LOCAL_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "YOUR_HF_TOKEN_HERE")
 
 BOUNDARY_THRESHOLD = 0.5
 TOP_RULES = 7

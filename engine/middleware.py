@@ -10,7 +10,7 @@ class BoundaryForgeMiddleware:
         with open(contract_path) as f:
             self.rules = json.load(f)["rules"]
     
-    def process(self, user_input: str) -> dict:
+    def process(self, user_input: str, model_name: str = MODEL_A) -> dict:
         input_lower = user_input.lower()
         
         # Pre-Filter (Input boundary check)
@@ -21,7 +21,7 @@ class BoundaryForgeMiddleware:
                         return {"response": "Request blocked by safety contract.", "action": "blocked", "rule": rule["name"]}
                     elif rule["action_type"] == "clarify":
                         res = client.chat.completions.create(
-                            model=MODEL_A,
+                            model=model_name,
                             messages=[{"role": "user", "content": f"Ask ONE clarifying question for: {user_input}"}],
                             temperature=0.2, max_tokens=100
                         )
@@ -29,7 +29,7 @@ class BoundaryForgeMiddleware:
 
         # Standard LLM Call
         res = client.chat.completions.create(
-            model=MODEL_A,
+            model=model_name,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_input}],
             temperature=0.3, max_tokens=300
         )

@@ -4,146 +4,571 @@ from openai import OpenAI
 import sys
 import os
 
-# Add the parent directory to sys.path to allow imports when running directly
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.middleware import BoundaryForgeMiddleware
 from config import LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A
+
 
 # ===== LOAD DATA =====
 def load_data():
     metrics, contract = None, None
     metrics_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "final_metrics.json")
     contract_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")
-    
     try:
         with open(metrics_path) as f:
             metrics = json.load(f)
     except:
         metrics = None
-
     try:
         with open(contract_path) as f:
             contract = json.load(f)
     except:
         contract = None
-
     return metrics, contract
 
 
 metrics, contract = load_data()
-middleware = BoundaryForgeMiddleware(contract_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")) if contract else None
+middleware = BoundaryForgeMiddleware(
+    contract_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")
+) if contract else None
 
-# OpenAI client (Using config settings)
 client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
 
 
 # ===== CORE FUNCTIONS =====
-
-def chat(user_input):
+def chat(user_input, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", ""
-
-    result = middleware.process(user_input)
-
+    result = middleware.process(user_input, model_name=model_name)
     status = f"Action: {result['action']}\nRule: {result.get('rule', 'None')}"
     return result["response"], status
 
 
-def compare(query):
+def compare(query, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", "", ""
-
-    # Baseline (no contract)
     try:
         base = client.chat.completions.create(
-            model=MODEL_A,
+            model=model_name,
             messages=[{"role": "user", "content": query}],
             temperature=0.3,
             max_tokens=300
         ).choices[0].message.content
     except Exception as e:
         base = f"Error: {str(e)}"
-
-    # With middleware
     try:
-        mw = middleware.process(query)
+        mw = middleware.process(query, model_name=model_name)
         improved = mw["response"]
         action = mw["action"]
     except Exception as e:
         improved = f"Error: {str(e)}"
         action = "error"
-
     return base, improved, action
 
 
-# ===== UI =====
+# ===== THEME =====
+theme = gr.themes.Base(
+    font=[gr.themes.GoogleFont("DM Sans"), "system-ui", "sans-serif"],
+    primary_hue="indigo",
+    neutral_hue="slate",
+).set(
+    body_background_fill="#F7F8FC",
+    body_background_fill_dark="#F7F8FC",
+    body_text_color="#0F172A",
+    body_text_color_dark="#0F172A",
+    block_background_fill="#FFFFFF",
+    block_background_fill_dark="#FFFFFF",
+    block_border_width="1px",
+    block_border_color="#E8EAF0",
+    block_border_color_dark="#E8EAF0",
+    block_radius="10px",
+    block_shadow="0 1px 3px rgba(0,0,0,0.05)",
+    block_label_background_fill="#FFFFFF",
+    block_label_background_fill_dark="#FFFFFF",
+    block_label_text_color="#6366F1",
+    block_label_text_color_dark="#6366F1",
+    block_label_text_size="11px",
+    block_label_text_weight="600",
+    block_title_text_color="#0F172A",
+    block_title_text_color_dark="#0F172A",
+    button_primary_background_fill="#6366F1",
+    button_primary_background_fill_dark="#6366F1",
+    button_primary_background_fill_hover="#4F46E5",
+    button_primary_background_fill_hover_dark="#4F46E5",
+    button_primary_text_color="#FFFFFF",
+    button_primary_text_color_dark="#FFFFFF",
+    button_primary_border_color="#6366F1",
+    button_primary_border_color_dark="#6366F1",
+    button_secondary_background_fill="#FFFFFF",
+    button_secondary_background_fill_dark="#FFFFFF",
+    button_secondary_background_fill_hover="#F1F5F9",
+    button_secondary_background_fill_hover_dark="#F1F5F9",
+    button_secondary_text_color="#475569",
+    button_secondary_text_color_dark="#475569",
+    button_secondary_border_color="#E2E8F0",
+    button_secondary_border_color_dark="#E2E8F0",
+    input_background_fill="#FAFBFD",
+    input_background_fill_dark="#FAFBFD",
+    input_border_color="#E2E8F0",
+    input_border_color_dark="#E2E8F0",
+    input_border_color_focus="#6366F1",
+    input_border_color_focus_dark="#6366F1",
+    input_placeholder_color="#CBD5E1",
+    input_placeholder_color_dark="#CBD5E1",
+    table_even_background_fill="#FFFFFF",
+    table_even_background_fill_dark="#FFFFFF",
+    table_odd_background_fill="#F8FAFC",
+    table_odd_background_fill_dark="#F8FAFC",
+    color_accent="#6366F1",
+    color_accent_soft="#EEF2FF",
+    color_accent_soft_dark="#EEF2FF",
+)
 
+# ===== CSS =====
+css = """
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,300&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body, .gradio-container { background-color: #F7F8FC !important; color: #0F172A !important; }
+
+/* GRADIO UI ICONS */
+.icon, button.icon, .settings-icon { color: #64748B !important; background: transparent !important; }
+.icon:hover, button.icon:hover, .settings-icon:hover { color: #0F172A !important; }
+
+/* FORCE DROPDOWN MENU TO BE WHITE */
+.dark .options, .dark ul.options, .dark .secondary-wrap {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+}
+.dark .options *, .dark ul.options * {
+    color: #0F172A !important;
+}
+.dark .option:hover, .dark li.option:hover {
+    background-color: #F8FAFC !important;
+}
+
+.gradio-container {
+    max-width: 960px !important;
+    margin: 0 auto !important;
+    padding: 0 1.5rem 5rem !important;
+}
+
+/* HEADER */
+.bf-header {
+    padding: 3.75rem 0 2.5rem;
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid #E2E8F0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+.bf-eyebrow {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #6366F1;
+    margin: 0 0 0.55rem;
+}
+.bf-wordmark {
+    font-family: 'Fraunces', serif;
+    font-size: 3.4rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #0F172A;
+    margin: 0;
+    line-height: 1;
+}
+.bf-wordmark em {
+    font-style: italic;
+    font-weight: 300;
+    color: #6366F1;
+}
+.bf-desc {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: #94A3B8;
+    margin: 0.55rem 0 0;
+    line-height: 1.5;
+}
+.bf-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #EEF2FF;
+    border: 1px solid #C7D2FE;
+    border-radius: 100px;
+    padding: 0.4rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #4F46E5;
+    margin-bottom: 0.2rem;
+}
+.bf-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #6366F1;
+    animation: bfpulse 2.2s ease-in-out infinite;
+}
+@keyframes bfpulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.4; transform:scale(0.8); }
+}
+
+/* TABS */
+.tab-nav {
+    background: transparent !important;
+    border-bottom: 1.5px solid #E2E8F0 !important;
+    padding: 0 !important;
+    margin-bottom: 1.5rem !important;
+    gap: 0 !important;
+}
+.tab-nav button {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    color: #94A3B8 !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+    padding: 0.7rem 1.2rem !important;
+    margin-bottom: -1.5px !important;
+    transition: color 0.15s !important;
+}
+.tab-nav button:hover, button[role="tab"]:hover { color: #475569 !important; background-color: transparent !important; }
+.tab-nav button.selected, button[role="tab"][aria-selected="true"] {
+    color: #6366F1 !important;
+    font-weight: 600 !important;
+    border-bottom-color: #6366F1 !important;
+    background: transparent !important;
+}
+
+/* BLOCKS */
+.gr-block, .gr-group, .gr-form {
+    background: #FFFFFF !important;
+    border: 1px solid #E8EAF0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+}
+.gr-group { padding: 1.2rem !important; margin-bottom: 1rem !important; }
+.gr-row { gap: 12px !important; }
+
+/* LABELS */
+label span {
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: #94A3B8 !important;
+}
+
+/* INPUTS */
+textarea, input[type="text"] {
+    background: #FAFBFD !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    color: #1E293B !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.9rem !important;
+    line-height: 1.6 !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+textarea:focus, input[type="text"]:focus {
+    border-color: #6366F1 !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
+    background: #FFFFFF !important;
+    outline: none !important;
+}
+textarea::placeholder, input::placeholder { color: #CBD5E1 !important; }
+
+/* BUTTONS */
+button.primary {
+    background: #6366F1 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #FFFFFF !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    padding: 0.62rem 1.5rem !important;
+    box-shadow: 0 1px 2px rgba(99,102,241,0.3), 0 4px 12px rgba(99,102,241,0.18) !important;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
+}
+button.primary:hover {
+    background: #4F46E5 !important;
+    box-shadow: 0 2px 4px rgba(79,70,229,0.35), 0 8px 20px rgba(79,70,229,0.22) !important;
+    transform: translateY(-1px) !important;
+}
+button.primary:active { transform: translateY(0) !important; }
+
+button.secondary {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    color: #475569 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 0.62rem 1.5rem !important;
+    transition: background 0.15s, border-color 0.15s !important;
+}
+button.secondary:hover {
+    background: #F8FAFC !important;
+    border-color: #CBD5E1 !important;
+}
+
+/* DROPDOWN */
+select {
+    background: #FAFBFD !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    color: #334155 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.88rem !important;
+}
+
+/* JSON */
+.gr-json {
+    background: #FAFBFD !important;
+    border: 1px solid #E8EAF0 !important;
+    border-radius: 8px !important;
+    font-size: 0.8rem !important;
+}
+
+/* METRICS */
+.mrow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.mcard {
+    background: #FFFFFF;
+    border: 1px solid #E8EAF0;
+    border-radius: 12px;
+    padding: 1.5rem 1.75rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.mcard.d { border-top: 3px solid #F87171; }
+.mcard.s { border-top: 3px solid #34D399; }
+.mtag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.67rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #94A3B8;
+    margin-bottom: 0.45rem;
+}
+.mnum {
+    font-family: 'Fraunces', serif;
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+.mnum.d { color: #EF4444; }
+.mnum.s { color: #10B981; }
+.msub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.77rem;
+    color: #94A3B8;
+    margin-top: 0.3rem;
+}
+.gcard {
+    background: linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 100%);
+    border: 1px solid #C7D2FE;
+    border-radius: 12px;
+    padding: 1.2rem 1.75rem;
+}
+.gtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6366F1;
+    margin-bottom: 10px;
+}
+.grow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.87rem;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(99,102,241,0.1);
+}
+.grow:last-child { border-bottom: none; }
+.gkey { color: #64748B; }
+.gval { color: #1E293B; font-weight: 600; }
+
+/* COMPARISON */
+.chead {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.cdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chead.u { color: #EF4444; }
+.chead.u .cdot { background: #FCA5A5; }
+.chead.p { color: #10B981; }
+.chead.p .cdot { background: #6EE7B7; }
+
+/* EMPTY */
+.empty {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    color: #CBD5E1;
+    text-align: center;
+    padding: 3.5rem 2rem;
+    border: 1.5px dashed #E2E8F0;
+    border-radius: 10px;
+    background: #FAFBFD;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+"""
+
+# Force Light Mode JS to kill all color bugs
+js_func = """
+function() {
+    const applyLightMode = () => {
+        if (document.body) document.body.classList.remove('dark');
+        if (document.documentElement) document.documentElement.classList.remove('dark');
+        const gc = document.querySelector('.gradio-container');
+        if (gc) gc.classList.remove('dark');
+    };
+    applyLightMode();
+    setTimeout(applyLightMode, 100);
+    setTimeout(applyLightMode, 1000);
+    const observer = new MutationObserver(applyLightMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+}
+"""
+
+# ===== BUILD UI =====
 with gr.Blocks(title="Boundary Forge") as demo:
 
-    gr.Markdown("""
-    # 🛡️ Boundary Forge
-    **Automated AI Safety Contract Compiler**
-    
-    *Powered by CrewAI + AMD MI300X*
+    gr.HTML("""
+    <div class="bf-header">
+        <div>
+            <p class="bf-eyebrow">Enterprise AI Safety</p>
+            <h1 class="bf-wordmark">Boundary<em>Forge</em></h1>
+            <p class="bf-desc">Safety contract compiler for production LLM deployments</p>
+        </div>
+        <div class="bf-badge">
+            <div class="bf-dot"></div>
+            AMD MI300X &middot; Active
+        </div>
+    </div>
     """)
 
-    # ===== TAB 1: LIVE DEMO =====
-    with gr.Tab("Live Demo"):
-        query = gr.Textbox(label="User Query", placeholder="Ask something tricky (e.g. 'Can you guarantee a refund if I lose money?')")
-        submit_btn = gr.Button("Submit", variant="primary")
-
-        with gr.Row():
-            response_box = gr.Textbox(label="Response", lines=5)
-            status_box = gr.Textbox(label="Middleware Status", lines=2)
-
-        submit_btn.click(chat, inputs=[query], outputs=[response_box, status_box])
-
-    # ===== TAB 2: BEFORE vs AFTER =====
-    with gr.Tab("Before vs After"):
-        compare_query = gr.Textbox(label="Test Query", placeholder="Try edge cases here...")
-        compare_btn = gr.Button("Compare Security", variant="secondary")
-
-        with gr.Row():
-            baseline_output = gr.Textbox(label="Baseline Output (No Protection)", lines=7)
-            improved_output = gr.Textbox(label="With Boundary Forge Contract", lines=7)
-            
-        action_output = gr.Textbox(label="Middleware Action Taken", lines=1)
-
-        compare_btn.click(
-            compare,
-            inputs=[compare_query],
-            outputs=[baseline_output, improved_output, action_output]
+    with gr.Group():
+        model_dropdown = gr.Dropdown(
+            choices=[
+                "Qwen/Qwen2.5-72B-Instruct",
+                "meta-llama/Meta-Llama-3-8B-Instruct",
+                "mistralai/Mistral-7B-Instruct-v0.3",
+            ],
+            value="Qwen/Qwen2.5-72B-Instruct",
+            label="Target Engine",
+            interactive=True,
         )
 
-    # ===== TAB 3: METRICS =====
-    with gr.Tab("Metrics & Proof"):
-        if metrics:
-            gr.Markdown(f"""
-            ## Performance Metrics
+    with gr.Tabs():
 
-            **Baseline Failure Rate:** {metrics.get('baseline_failure_rate', 'N/A')}%  
-            **With Contract:** {metrics.get('contract_failure_rate', 'N/A')}%  
+        with gr.Tab("Live Middleware"):
+            with gr.Group():
+                query = gr.Textbox(
+                    label="User Query",
+                    placeholder="Enter a potentially adversarial prompt…",
+                    lines=3,
+                )
+                submit_btn = gr.Button("Submit to Middleware", variant="primary")
+            with gr.Row():
+                with gr.Column(scale=2):
+                    response_box = gr.Textbox(label="AI Response", lines=8, interactive=False)
+                with gr.Column(scale=1):
+                    status_box = gr.Textbox(label="Middleware Status", lines=4, interactive=False)
+            submit_btn.click(chat, inputs=[query, model_dropdown], outputs=[response_box, status_box])
 
-            ---
-            """)
+        with gr.Tab("A / B Testing"):
+            with gr.Group():
+                compare_query = gr.Textbox(
+                    label="Test Query",
+                    placeholder="Enter adversarial edge cases here…",
+                    lines=3,
+                )
+                compare_btn = gr.Button("Run Comparison", variant="secondary")
+            action_output = gr.Textbox(label="Middleware Action Taken", lines=1, interactive=False)
+            with gr.Row():
+                with gr.Column():
+                    gr.HTML('<div class="chead u"><div class="cdot"></div>Baseline — Unprotected</div>')
+                    baseline_output = gr.Textbox(label="", lines=9, interactive=False, show_label=False)
+                with gr.Column():
+                    gr.HTML('<div class="chead p"><div class="cdot"></div>Boundary Forge — Protected</div>')
+                    improved_output = gr.Textbox(label="", lines=9, interactive=False, show_label=False)
+            compare_btn.click(
+                compare,
+                inputs=[compare_query, model_dropdown],
+                outputs=[baseline_output, improved_output, action_output],
+            )
 
-            if "gpu_time_seconds" in metrics:
-                gr.Markdown(f"""
-                **GPU Execution Time:** {metrics.get('gpu_time_seconds')} sec  
-                **Estimated CPU Time:** {metrics.get('estimated_cpu_time_seconds')} sec  
-                """)
-        else:
-            gr.Markdown("Run the system to generate metrics.")
+        with gr.Tab("Metrics"):
+            if metrics:
+                br = metrics.get("baseline_failure_rate", "N/A")
+                cr = metrics.get("contract_failure_rate", "N/A")
+                gpu_html = ""
+                if "gpu_time_seconds" in metrics:
+                    gpu_html = f"""
+                    <div class="gcard">
+                        <div class="gtitle">Compute Acceleration &mdash; AMD MI300X</div>
+                        <div class="grow"><span class="gkey">GPU Execution Time</span><span class="gval">{metrics.get('gpu_time_seconds')}s</span></div>
+                        <div class="grow"><span class="gkey">Estimated CPU Time</span><span class="gval">{metrics.get('estimated_cpu_time_seconds')}s</span></div>
+                        <div class="grow"><span class="gkey">Backend</span><span class="gval">vLLM on ROCm</span></div>
+                    </div>"""
+                gr.HTML(f"""
+                <div class="mrow">
+                    <div class="mcard d">
+                        <div class="mtag">Baseline Failure Rate</div>
+                        <div class="mnum d">{br}%</div>
+                        <div class="msub">Without safety contract</div>
+                    </div>
+                    <div class="mcard s">
+                        <div class="mtag">With Safety Contract</div>
+                        <div class="mnum s">{cr}%</div>
+                        <div class="msub">Boundary Forge protected</div>
+                    </div>
+                </div>{gpu_html}""")
+            else:
+                gr.HTML('<div class="empty">Run main.py to generate performance metrics</div>')
 
-    # ===== TAB 4: CONTRACT =====
-    with gr.Tab("Compiled Contract"):
-        if contract:
-            gr.JSON(contract)
-        else:
-            gr.Markdown("No contract generated yet. Run main.py first.")
+        with gr.Tab("Contract Object"):
+            if contract:
+                gr.JSON(contract)
+            else:
+                gr.HTML('<div class="empty">No contract generated yet — run main.py first</div>')
 
 
-# ===== RUN APP =====
 if __name__ == "__main__":
-    demo.launch(share=True, theme=gr.themes.Monochrome())
+    demo.launch(share=True, theme=theme, css=css, js=js_func)
