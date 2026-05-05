@@ -58,5 +58,5 @@ else:
     LOCAL_LLM_URL_B = f"https://api-inference.huggingface.co/models/{LOCAL_MODEL_B}/v1/"
 
 
-BOUNDARY_THRESHOLD = 0.5
+BOUNDARY_THRESHOLD = 0.35
 TOP_RULES = 7
