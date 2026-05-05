@@ -1,4 +1,3 @@
-vllm
 crewai
 langchain-openai
 crewai-tools

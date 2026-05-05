@@ -34,7 +34,9 @@ Answer strictly FAIL or PASS.
         temperature=0.1,
         max_tokens=10
     )
-    return "FAIL" in res.choices[0].message.content.upper()
+    ans = res.choices[0].message.content.strip().upper()
+    # Check for exact word to avoid matching "NOT FAIL"
+    return ans == "FAIL" or ans.startswith("FAIL")
 
 
 def compute_throughput_metrics():

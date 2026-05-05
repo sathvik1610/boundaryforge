@@ -88,7 +88,7 @@ MODEL_A = "Qwen/Qwen2.5-72B-Instruct"
 MODEL_B = "mistralai/Mistral-7B-Instruct-v0.3"
 
 # Local vLLM Endpoints for CrewAI
-LOCAL_LLM_URL = "http://localhost:8001/v1"
+LOCAL_LLM_URL = "http://localhost:8000/v1"
 LOCAL_API_KEY = "sk-dummy"
 
 BOUNDARY_THRESHOLD = 0.5
