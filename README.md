@@ -106,31 +106,47 @@ A common question is: *"If the UI has a dropdown for Qwen, Llama, and Mistral, h
 
 Boundary Forge is designed with an **API Gateway Architecture**. Here is how you configure and deploy it in an enterprise environment:
 
-### 1. How Models get onto the AMD Server (vLLM)
-You do **not** need to manually download or move massive model files. We rely on `vLLM` to handle weights automatically. 
+### 1. The AMD MI300X Setup (.env & vLLM)
+You do **not** need to manually download or move massive model files. We rely on `vLLM` to handle weights automatically, and we use a `.env` file to manage all pipeline parameters.
 
-Spin up an MI300X instance on the AMD Developer Cloud, install `vllm`, and run the following command. `vLLM` will automatically pull the model from Hugging Face, compile it for ROCm, and load it into the MI300X VRAM:
-```bash
-python3 -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen2.5-72B-Instruct \
-  --port 8000
+First, set up your `.env` file with your `HF_TOKEN` and production parameters:
+```ini
+USE_AMD_SERVER=true
+PROBE_COUNT=2500
+BATCH_SIZE=50
+K_RUNS=3
+VLLM_PORT=8000
+HF_TOKEN=hf_your_real_key_here
 ```
 
-### 2. The Configuration & UI Dropdown Architecture
-In a production environment, you cannot run three 70B+ parameter models on a single server. Instead, an enterprise runs a **Cluster of MI300X instances**.
+Then, spin up an MI300X instance on the AMD Developer Cloud, install `vllm` for ROCm, and run the following command. The engine will automatically pull the model from Hugging Face and load it into VRAM:
+```bash
+export HF_TOKEN="hf_your_real_key_here"
 
-*   **Server A** runs Qwen (`IP: 10.0.0.1:8000`)
-*   **Server B** runs Llama 3 (`IP: 10.0.0.2:8000`)
-*   **Server C** runs Mistral (`IP: 10.0.0.3:8000`)
+python3 -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-72B-Instruct \
+  --port 8000 \
+  --gpu-memory-utilization 0.90 \
+  --max-model-len 8192 \
+  --dtype bfloat16 \
+  --trust-remote-code
+```
 
-The Dropdown Menu in the Gradio UI (`ui/app.py`) acts as a load-balancer interface. When a user selects a model from the dropdown, the system updates the dynamic `base_url` target, routing the request to the correct dedicated AMD server.
+### 2. The Single-Model Divergence Architecture
+In a production environment, you cannot run three 70B+ parameter models on a single server without running out of VRAM. Instead of comparing Qwen to a completely different model like Mistral, we use a sophisticated **Temperature Divergence Strategy**.
 
-> **Hackathon Simulation Note:** For ease of local testing and demonstration without a massive cloud budget, `config.py` is currently configured to route these UI dropdown requests to **Hugging Face Serverless API Endpoints** (`https://api-inference.huggingface.co/v1/`). This perfectly simulates the multi-server API gateway architecture.
+*   **Model A (Creative):** The pipeline queries `Qwen2.5-72B-Instruct` at **Temperature 0.5**.
+*   **Model B (Strict):** The pipeline queries the *exact same model* at **Temperature 0.3**.
+
+By mathematically comparing how the model changes its answer when forced to be more deterministic, we can isolate vulnerabilities using only a single vLLM server instance.
+
+> **UI Gateway Note:** The Dropdown Menu in the Gradio UI lists Llama and Mistral to demonstrate how this Middleware would act as a universal API gateway for an enterprise, but for this specific AMD hardware execution, all backend UI logic strictly routes to the Qwen engine running on port 8000.
 
 ### 3. Compile the Safety Contract
-Run the heavy compute pipeline to generate the deterministic JSON guardrails:
+Run the heavy compute pipeline to generate the deterministic JSON guardrails. 
+*(Note: To prevent accidental 10,000-inference runs, the pipeline runs a 10-probe test by default. You must explicitly pass the `--production` flag to execute the massive 2500-probe run).*
 ```bash
-python main.py
+python main.py --production
 ```
 
 ### 4. Launch the Enterprise Dashboard

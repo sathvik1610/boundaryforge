@@ -627,17 +627,26 @@ from engine.metrics import run_validation
 
 def run_boundary_forge():
     print("=== BOUNDARY FORGE INITIALIZED ===")
+    import sys
+    if "--production" in sys.argv:
+        print("🚀 RUNNING IN PRODUCTION MODE (--production flag detected)")
+    else:
+        print("⚠️ RUNNING IN TEST MODE (No --production flag detected)")
     
     print("\n[1] CrewAI Generating Probes...")
-    probes = generate_probes(total=2500)
+    probes = generate_probes(total=PROBE_COUNT)
     random.shuffle(probes)
-    train, test = probes[:1500], probes[1500:] # Use 200 for fast validation
+    train, test = probes[:max(1, len(probes)//2)], probes[max(1, len(probes)//2):]
     
     print("\n[2] AMD MI300X Batch Inference...")
     results = run_all_probes(train)
+    if len(results) < len(train) // 4:
+        raise ValueError("CRITICAL FAILURE: Batch inference catastrophically failed.")
     
     print("\n[3] Extracting Signals...")
     boundaries = extract_boundaries(results)
+    if not boundaries:
+        raise ValueError("CRITICAL FAILURE: Signal extractor found zero boundaries.")
     
     print("\n[4] CrewAI Hierarchical Compilation...")
     rules = run_compilation_crew(boundaries)
