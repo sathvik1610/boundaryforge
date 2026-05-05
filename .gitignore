@@ -21,3 +21,6 @@ data/timing.json
 # IDEs
 .vscode/
 .idea/
+
+# Internal Admin Docs
+ADMIN.md

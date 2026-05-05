@@ -44,6 +44,15 @@ Boundary Forge operates in two phases: **The Forge** (Heavy Compute) and **The S
 2. Every incoming user prompt is scanned against the JSON rules.
 3. If it matches a mapped vulnerability, the Middleware **blocks, clarifies, or flags** *before the LLM is even invoked* — saving compute and guaranteeing zero hallucinations on known attack vectors.
 
+#### 🧠 Catching Unseen Attacks (The Semantic Layer)
+*How does it perform on attacks it has never seen before?*
+
+This is exactly why we built the **Semantic Layer** into our middleware using `all-MiniLM-L6-v2`. 
+
+If we only used exact keyword matching, an attacker could just use a synonym and bypass the contract. But because our middleware runs a local **cosine similarity check** on the user's intent, it catches attacks it has never seen. 
+
+For example, if our contract rule flags the phrase *"conceal from spouse"*, and a brand new attacker types *"I need to hide my assets during a divorce"*, the mathematical vector distance between those two sentences is close enough (`Score > 0.45`) that our middleware instantly intercepts it. The model doesn't need to have seen the exact wording before; it just maps the *intent* to the forbidden vector space.
+
 ---
 
 ## 🧮 4. The Mathematics of AI Failure (The Vector Engine)
