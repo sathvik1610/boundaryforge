@@ -1,14 +1,12 @@
 import json
 from crewai import Agent, Task, Crew, Process
 from crewai import LLM
-from config import DOMAIN_CONTEXT, LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A
+from config import LOCAL_API_KEY, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER, DOMAIN_CONTEXT
 
-llm = LLM(
-    model=f"openai/{MODEL_A}",
-    base_url=LOCAL_LLM_URL,
-    api_key=LOCAL_API_KEY,
-    temperature=0.8
-)
+if USE_AMD_SERVER:
+    llm = LLM(model=f"openai/{MODEL_A}", base_url="http://localhost:8000/v1/", api_key=LOCAL_API_KEY, temperature=0.8)
+else:
+    llm = LLM(model=f"huggingface/{ACTIVE_MODEL_A}", api_key=LOCAL_API_KEY, temperature=0.8)
 
 def build_generation_crew(batch_size: int) -> Crew:
     prober = Agent(

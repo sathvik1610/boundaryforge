@@ -1,13 +1,13 @@
 import gradio as gr
 import json
-from openai import OpenAI
+from litellm import completion
 import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from engine.middleware import BoundaryForgeMiddleware
-from config import LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A
+from config import LOCAL_API_KEY, MODEL_A
 
 
 # ===== LOAD DATA =====
@@ -33,14 +33,23 @@ middleware = BoundaryForgeMiddleware(
     contract_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")
 ) if contract else None
 
-client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
+def get_model_and_base():
+    """Always routes to the active model. Dropdown is display-only (API Gateway framing)."""
+    from config import USE_AMD_SERVER, ACTIVE_MODEL_A, MODEL_A
+    # On AMD: use the production 72B model served by vLLM
+    # On local: use the smaller fast model on HF free tier
+    mdl = f"openai/{MODEL_A}" if USE_AMD_SERVER else f"huggingface/{ACTIVE_MODEL_A}"
+    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    return mdl, base
 
 
 # ===== CORE FUNCTIONS =====
 def chat(user_input, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", ""
-    result = middleware.process(user_input, model_name=model_name)
+    from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
+    active = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
+    result = middleware.process(user_input, model_name=active)
     status = f"Action: {result['action']}\nRule: {result.get('rule', 'None')}"
     return result["response"], status
 
@@ -49,22 +58,29 @@ def compare(query, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", "", ""
     try:
-        base = client.chat.completions.create(
-            model=model_name,
-            messages=[{"role": "user", "content": query}],
+        from engine.middleware import SYSTEM_PROMPT
+        mdl, base = get_model_and_base()
+        res = completion(
+            model=mdl,
+            api_base=base,
+            api_key=LOCAL_API_KEY,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": query}],
             temperature=0.3,
             max_tokens=300
-        ).choices[0].message.content
+        )
+        base_text = res.choices[0].message.content
     except Exception as e:
-        base = f"Error: {str(e)}"
+        base_text = f"Error: {str(e)}"
+    from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
+    active = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
     try:
-        mw = middleware.process(query, model_name=model_name)
+        mw = middleware.process(query, model_name=active)
         improved = mw["response"]
         action = mw["action"]
     except Exception as e:
         improved = f"Error: {str(e)}"
         action = "error"
-    return base, improved, action
+    return base_text, improved, action
 
 
 # ===== THEME =====

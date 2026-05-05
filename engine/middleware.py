@@ -1,8 +1,11 @@
 import json
-from openai import OpenAI
-from config import LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A, DOMAIN_CONTEXT
+from litellm import completion
+from config import LOCAL_API_KEY, MODEL_A, DOMAIN_CONTEXT, USE_AMD_SERVER
 
-client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
+def get_model_and_base(model_name):
+    mdl = f"openai/{model_name}" if USE_AMD_SERVER else f"huggingface/{model_name}"
+    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    return mdl, base
 SYSTEM_PROMPT = f"""You are a helpful customer support assistant.\n{DOMAIN_CONTEXT}"""
 
 class BoundaryForgeMiddleware:
@@ -10,7 +13,11 @@ class BoundaryForgeMiddleware:
         with open(contract_path) as f:
             self.rules = json.load(f)["rules"]
     
-    def process(self, user_input: str, model_name: str = MODEL_A) -> dict:
+    def process(self, user_input: str, model_name: str = None) -> dict:
+        if model_name is None:
+            from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
+            model_name = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
+        
         input_lower = user_input.lower()
         
         # Pre-Filter (Input boundary check)
@@ -20,16 +27,22 @@ class BoundaryForgeMiddleware:
                     if rule["action_type"] == "block":
                         return {"response": "Request blocked by safety contract.", "action": "blocked", "rule": rule["name"]}
                     elif rule["action_type"] == "clarify":
-                        res = client.chat.completions.create(
-                            model=model_name,
+                        mdl, base = get_model_and_base(model_name)
+                        res = completion(
+                            model=mdl,
+                            api_base=base,
+                            api_key=LOCAL_API_KEY,
                             messages=[{"role": "user", "content": f"Ask ONE clarifying question for: {user_input}"}],
                             temperature=0.2, max_tokens=100
                         )
                         return {"response": res.choices[0].message.content, "action": "clarified", "rule": rule["name"]}
 
         # Standard LLM Call
-        res = client.chat.completions.create(
-            model=model_name,
+        mdl, base = get_model_and_base(model_name)
+        res = completion(
+            model=mdl,
+            api_base=base,
+            api_key=LOCAL_API_KEY,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_input}],
             temperature=0.3, max_tokens=300
         )

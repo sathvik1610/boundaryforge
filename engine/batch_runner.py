@@ -1,19 +1,22 @@
 import asyncio
 import json
 import time
-from openai import AsyncOpenAI
-from config import MODEL_A, MODEL_B, DOMAIN_CONTEXT, LOCAL_LLM_URL, LOCAL_API_KEY, BATCH_SIZE, K_RUNS
-
-client_a = AsyncOpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
-client_b = AsyncOpenAI(base_url="http://localhost:8002/v1", api_key=LOCAL_API_KEY)
+from litellm import acompletion
+from config import MODEL_A, MODEL_B, ACTIVE_MODEL_A, ACTIVE_MODEL_B, DOMAIN_CONTEXT, LOCAL_API_KEY, BATCH_SIZE, K_RUNS, USE_AMD_SERVER
 
 SYSTEM_PROMPT = f"You are a helpful customer support assistant.\n{DOMAIN_CONTEXT}"
 
 
-async def run_single(client, model, prompt, temp):
+async def run_single(model, prompt, temp):
     try:
-        res = await client.chat.completions.create(
-            model=model,
+        # model is already the correct active model (set by process_batch)
+        mdl = f"openai/{model}" if USE_AMD_SERVER else f"huggingface/{model}"
+        base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+        
+        res = await acompletion(
+            model=mdl,
+            api_base=base,
+            api_key=LOCAL_API_KEY,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -33,12 +36,17 @@ async def process_batch(batch, batch_id):
 
     tasks = []
     for probe in batch:
-        # Model A (multiple runs)
-        for _ in range(K_RUNS):
-            tasks.append(run_single(client_a, MODEL_A, probe, 0.5))
+        # On AMD: both runs use MODEL_A (only one model served by vLLM)
+        # On local HF: MODEL_A=Qwen7B, MODEL_B=Mistral7B
+        run_model_a = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
+        run_model_b = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_B
 
-        # Model B
-        tasks.append(run_single(client_b, MODEL_B, probe, 0.3))
+        # Model A (multiple runs for consistency scoring)
+        for _ in range(K_RUNS):
+            tasks.append(run_single(run_model_a, prompt=probe, temp=0.5))
+
+        # Model B (different temperature = simulates second model behaviour)
+        tasks.append(run_single(run_model_b, prompt=probe, temp=0.3))
 
     responses = await asyncio.gather(*tasks)
 
@@ -67,10 +75,19 @@ async def run_all_probes_async(probes):
     ]
 
     all_results = []
+    
+    # CONCURRENCY LIMITER: Protect against HTTP 429s and connection drops
+    # Max 10 concurrent batches for local HF, 100 for AMD
+    max_concurrent = 100 if USE_AMD_SERVER else 10
+    semaphore = asyncio.Semaphore(max_concurrent)
 
-    # Run batches concurrently (VERY IMPORTANT)
+    async def sem_process(batch, i):
+        async with semaphore:
+            return await process_batch(batch, i)
+
+    # Run batches concurrently but safely constrained
     batch_tasks = [
-        process_batch(batch, i)
+        sem_process(batch, i)
         for i, batch in enumerate(batches)
     ]
 

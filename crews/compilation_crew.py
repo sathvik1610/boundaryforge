@@ -1,15 +1,12 @@
 import json
 from crewai import Agent, Task, Crew, Process
 from crewai import LLM
-from crews.tools import conflict_resolver_tool
-from config import LOCAL_LLM_URL, LOCAL_API_KEY, TOP_RULES, MODEL_A
+from config import LOCAL_API_KEY, TOP_RULES, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER
 
-llm = LLM(
-    model=f"openai/{MODEL_A}",
-    base_url=LOCAL_LLM_URL,
-    api_key=LOCAL_API_KEY,
-    temperature=0.1
-)
+if USE_AMD_SERVER:
+    llm = LLM(model=f"openai/{MODEL_A}", base_url="http://localhost:8000/v1/", api_key=LOCAL_API_KEY, temperature=0.1)
+else:
+    llm = LLM(model=f"huggingface/{ACTIVE_MODEL_A}", api_key=LOCAL_API_KEY, temperature=0.1)
 
 
 def run_compilation_crew(boundaries: list) -> list:
@@ -28,7 +25,6 @@ def run_compilation_crew(boundaries: list) -> list:
         goal='Translate failure patterns into strict JSON rules.',
         backstory='You are a strict systems engineer.',
         verbose=True,
-        tools=[conflict_resolver_tool],
         llm=llm
     )
 

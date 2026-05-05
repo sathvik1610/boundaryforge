@@ -16,14 +16,32 @@ BATCH_SIZE = 1
 K_RUNS = 1 
 
 
+# === AMD PRODUCTION MODELS (used when USE_AMD_SERVER=True) ===
 MODEL_A = os.getenv("MODEL_A", "Qwen/Qwen2.5-72B-Instruct")
 MODEL_B = os.getenv("MODEL_B", "meta-llama/Meta-Llama-3-8B-Instruct")
 
-# Local vLLM or External API Endpoints
-# For final AMD run: "http://localhost:8001/v1"
-# For Hugging Face testing: "https://api-inference.huggingface.co/v1/"
-LOCAL_LLM_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1/") 
-LOCAL_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "YOUR_HF_TOKEN_HERE")
+# === LOCAL TESTING MODELS (smaller = faster on HF free tier) ===
+LOCAL_MODEL_A = os.getenv("LOCAL_MODEL_A", "Qwen/Qwen2.5-7B-Instruct")
+LOCAL_MODEL_B = os.getenv("LOCAL_MODEL_B", "mistralai/Mistral-7B-Instruct-v0.3")
+
+# ===== DEPLOYMENT MODE =====
+# Set this to True when running on the AMD MI300X instance.
+# Keep False for local Hugging Face testing.
+USE_AMD_SERVER = False
+
+LOCAL_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")  # Set via environment variable!
+
+# Active models depend on deployment mode
+ACTIVE_MODEL_A = MODEL_A if USE_AMD_SERVER else LOCAL_MODEL_A
+ACTIVE_MODEL_B = MODEL_B if USE_AMD_SERVER else LOCAL_MODEL_B
+
+if USE_AMD_SERVER:
+    LOCAL_LLM_URL_A = "http://localhost:8000/v1/"
+    LOCAL_LLM_URL_B = "http://localhost:8000/v1/"
+else:
+    LOCAL_LLM_URL_A = f"https://api-inference.huggingface.co/models/{LOCAL_MODEL_A}/v1/"
+    LOCAL_LLM_URL_B = f"https://api-inference.huggingface.co/models/{LOCAL_MODEL_B}/v1/"
+
 
 BOUNDARY_THRESHOLD = 0.5
 TOP_RULES = 7

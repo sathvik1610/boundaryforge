@@ -100,31 +100,41 @@ Building an automated meta-testing tool was incredibly challenging. Here is how 
 
 ---
 
-## ⚙️ 8. How to Run & Deploy
+## ⚙️ 8. How to Configure & Deploy (AMD Architecture)
 
-### 1. Start the AMD ROCm Server
-Spin up an MI300X instance on the AMD Developer Cloud and start the high-throughput vLLM engine:
+A common question is: *"If the UI has a dropdown for Qwen, Llama, and Mistral, how are you putting all those models onto a single AMD server?"*
+
+Boundary Forge is designed with an **API Gateway Architecture**. Here is how you configure and deploy it in an enterprise environment:
+
+### 1. How Models get onto the AMD Server (vLLM)
+You do **not** need to manually download or move massive model files. We rely on `vLLM` to handle weights automatically. 
+
+Spin up an MI300X instance on the AMD Developer Cloud, install `vllm`, and run the following command. `vLLM` will automatically pull the model from Hugging Face, compile it for ROCm, and load it into the MI300X VRAM:
 ```bash
 python3 -m vllm.entrypoints.openai.api_server \
   --model Qwen/Qwen2.5-72B-Instruct \
-  --port 8001
+  --port 8000
 ```
 
-### 2. Configure the Forge
-In your local `config.py`, point the system to your AMD instance:
-```python
-LOCAL_LLM_URL = "http://<YOUR_AMD_INSTANCE_IP>:8001/v1"
-LOCAL_API_KEY = "sk-dummy"
-```
+### 2. The Configuration & UI Dropdown Architecture
+In a production environment, you cannot run three 70B+ parameter models on a single server. Instead, an enterprise runs a **Cluster of MI300X instances**.
+
+*   **Server A** runs Qwen (`IP: 10.0.0.1:8000`)
+*   **Server B** runs Llama 3 (`IP: 10.0.0.2:8000`)
+*   **Server C** runs Mistral (`IP: 10.0.0.3:8000`)
+
+The Dropdown Menu in the Gradio UI (`ui/app.py`) acts as a load-balancer interface. When a user selects a model from the dropdown, the system updates the dynamic `base_url` target, routing the request to the correct dedicated AMD server.
+
+> **Hackathon Simulation Note:** For ease of local testing and demonstration without a massive cloud budget, `config.py` is currently configured to route these UI dropdown requests to **Hugging Face Serverless API Endpoints** (`https://api-inference.huggingface.co/v1/`). This perfectly simulates the multi-server API gateway architecture.
 
 ### 3. Compile the Safety Contract
-Run the heavy compute pipeline to generate the safety guardrails:
+Run the heavy compute pipeline to generate the deterministic JSON guardrails:
 ```bash
 python main.py
 ```
 
-### 4. Launch the Interactive UI
-Test the resulting safety contract live via the Gradio Dashboard:
+### 4. Launch the Enterprise Dashboard
+Test the resulting safety contract live:
 ```bash
 python ui/app.py
 ```

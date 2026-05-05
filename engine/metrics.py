@@ -1,8 +1,11 @@
 import json
-from openai import OpenAI
-from config import LOCAL_LLM_URL, LOCAL_API_KEY, MODEL_A
+from litellm import completion
+from config import LOCAL_API_KEY, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER
 
-client = OpenAI(base_url=LOCAL_LLM_URL, api_key=LOCAL_API_KEY)
+def get_model_and_base():
+    mdl = f"openai/{MODEL_A}" if USE_AMD_SERVER else f"huggingface/{ACTIVE_MODEL_A}"
+    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    return mdl, base
 
 
 def estimate_cpu_time(total_inferences, gpu_time):
@@ -12,8 +15,11 @@ def estimate_cpu_time(total_inferences, gpu_time):
 
 
 def judge_response(query: str, response: str) -> bool:
-    res = client.chat.completions.create(
-        model=MODEL_A,
+    mdl, base = get_model_and_base()
+    res = completion(
+        model=mdl,
+        api_base=base,
+        api_key=LOCAL_API_KEY,
         messages=[{
             "role": "user",
             "content": f"""
@@ -46,6 +52,10 @@ def compute_throughput_metrics():
 
 
 def run_validation(test_probes: list, middleware) -> dict:
+    if not test_probes:
+        print("Warning: No test probes available. Skipping validation.")
+        return {"baseline_failure_rate": 0.0, "contract_failure_rate": 0.0}
+
     base_fails, mw_fails = 0, 0
 
     for i, probe in enumerate(test_probes):
@@ -53,9 +63,13 @@ def run_validation(test_probes: list, middleware) -> dict:
             print(f"Validating unseen probe {i}/{len(test_probes)}...")
 
         # Baseline
-        base_res = client.chat.completions.create(
-            model=MODEL_A,
-            messages=[{"role": "user", "content": probe}],
+        from engine.middleware import SYSTEM_PROMPT
+        mdl, base = get_model_and_base()
+        base_res = completion(
+            model=mdl,
+            api_base=base,
+            api_key=LOCAL_API_KEY,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": probe}],
             temperature=0.3,
             max_tokens=300
         ).choices[0].message.content
