@@ -29,7 +29,7 @@ def extract_boundaries(results: list, threshold: float = BOUNDARY_THRESHOLD) -> 
         boundary_score = (0.4 * c_score + 0.4 * d_score + 0.2 * conf_score)
         
         if boundary_score >= threshold:
-            item.update({"boundary_score": round(boundary_score, 3)})
+            item.update({"boundary_score": round(float(boundary_score), 3)})
             boundaries.append(item)
             
     boundaries = sorted(boundaries, key=lambda x: x["boundary_score"], reverse=True)
