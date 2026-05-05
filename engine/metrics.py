@@ -239,7 +239,7 @@ def run_validation(test_probes: list, middleware) -> dict:
     print(f"{'─' * W}")
     print(f"  SYSTEM-LEVEL IMPACT")
     print(f"    % of flagged attacks now blocked  : {interception_rate}%")
-    print(f"    Attacks NEVER reaching the model  : {never_reach_model_pct}% of all enterprise traffic")
+    print(f"    Adversarial traffic flagged pre-model   : {never_reach_model_pct}% of all traffic (adversarial probes intercepted)")
     print(f"    Effective failure rate (protected) : {effective_failure_rate}%  (was {baseline_failure_rate}% unprotected)")
     reduction = round((1 - effective_failure_rate / baseline_failure_rate) * 100, 1) if baseline_failure_rate else 0
     print(f"    Failure reduction                 : {reduction}% fewer failures with Boundary Forge")

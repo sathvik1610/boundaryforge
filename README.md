@@ -33,8 +33,8 @@ Boundary Forge operates in two phases: **The Forge** (Heavy Compute) and **The S
 ### Phase 1: The Forge (Agentic Backend)
 | Stage | What Happens | Key Tool |
 |---|---|---|
-| **1. Probe Generation** | CrewAI agent generates 2,500 adversarial jailbreak prompts across roleplay, logic traps, prompt injection, and financial fraud categories | CrewAI + Qwen 72B |
-| **2. Batch Inference** | All 2,500 probes fired concurrently at Qwen at two temperatures (0.5 & 0.3) via 100-slot async semaphore | vLLM + asyncio |
+| **1. Probe Generation** | CrewAI agent generates 1,000+ adversarial jailbreak prompts across roleplay, logic traps, prompt injection, and financial fraud categories | CrewAI + Qwen 72B |
+| **2. Batch Inference** | All 1,000+ probes fired concurrently at Qwen at two temperatures (0.5 & 0.3) via 100-slot async semaphore | vLLM + asyncio |
 | **3. Signal Extraction** | Vectorized math (Consistency, Divergence, Confidence) calculates boundary scores for every probe in milliseconds | sentence-transformers + NumPy |
 | **4. Contract Compilation** | K-Means clusters the failure embeddings → picks representative failures → CrewAI Architect writes the deterministic JSON contract | CrewAI + sklearn |
 | **5. Async Validation** | All validation probes fire concurrently with batch judging — 10× faster than sequential | asyncio.gather + batch judge |
@@ -75,16 +75,16 @@ This section documents every bottleneck we identified and the exact fix applied.
 ### Stage 2: AMD MI300X Batch Inference — *Eliminated*
 - **Fix:** `asyncio.gather()` fires all probes concurrently with a 100-slot semaphore (`request_semaphore`).
 - **Fix:** Both Temp 0.5 and Temp 0.3 inferences scheduled in the same async task batch.
-- **Result:** 2,500 probes × 4 inferences each = **10,000 total inferences in ~7 minutes** on MI300X.
+- **Result:** 1,000+ probes × 4 inferences each = **4,000+ total inferences in ~7 minutes** on MI300X.
 
 ### Stage 3: Signal Extraction — *No Bottleneck*
 - Pure vectorized NumPy math. Runs in milliseconds. No changes needed.
 
 ### Stage 4: Contract Compilation — *Token Limit Eliminated*
 - **Root cause:** Sending raw verbose 72B responses to the compiler blew past the 4096-token context limit (literally 1 token over on our production run).
-- **Fix 1 (K-Means Clustering):** Embeds all boundary failures with `all-MiniLM-L6-v2`, clusters into 6 semantic groups, picks the highest-severity representative from each. Guarantees diverse coverage without sending redundant failures.
+- **Fix 1 (K-Means Clustering):** Embeds all boundary failures with `all-MiniLM-L6-v2`, clusters into 10 semantic groups, picks the highest-severity representative from each. Guarantees diverse coverage without sending redundant failures.
 - **Fix 2 (Compact Objects):** Instead of full verbose text, passes `{"probe": ..., "severity": ..., "sample_failure": ...}` — semantically dense, token-minimal.
-- **Result:** Token usage dropped from 4,097 → ~600 tokens. Token limit bug is architecturally impossible now.
+- **Result:** Token usage dropped from 4,097 → ~600 tokens. Token limit bug is architecturally impossible now, allowing the AI Architect to successfully generate up to 15 intent-based rules.
 
 ### Stage 5: Middleware Validation — *10× Speed Improvement*
 - **Root cause:** 25 probes × 4 sequential LLM calls = 100 sequential blocking API calls (~8 minutes).
@@ -127,13 +127,15 @@ This section documents every bottleneck we identified and the exact fix applied.
 
 | Metric | Value |
 |---|---|
-| **Total Probes Fired (Production Run)** | 2,500 |
-| **Total Inferences Executed** | 10,000 |
-| **AMD MI300X GPU Time** | 431.37 seconds (~7 min) |
+| **Total Probes Fired (Production Run)** | 1,009 |
+| **Baseline Failure Rate** | 2.48% (25 vulnerabilities found) |
+| **Safety Rules Compiled** | 15 intent-based semantic rules |
+| **Attack Interception Rate** | 68.0% of known attacks blocked |
+| **Effective Failure Rate** | 0.79% (down from 2.48%) |
+| **Failure Reduction** | 68.1% fewer failures |
+| **AMD MI300X GPU Time** | 431.4 seconds (~7 min) |
 | **Equivalent CPU Time (estimated)** | 8,072 seconds (~2.2 hours) |
-| **AMD Speedup Factor** | **~19×** |
-| **Boundary Failures Extracted** | 28 |
-| **Safety Rules Compiled** | 7 |
+| **AMD Speedup Factor** | **18.7× faster** |
 
 ---
 
@@ -213,7 +215,7 @@ python resume.py
 python ui/app.py
 ```
 Open the Gradio link and explore:
-- **Contract Object** — The 7 compiled safety rules
+- **Contract Object** — The 15 compiled safety rules
 - **A/B Testing** — Side-by-side boundary failures
 - **Metrics** — GPU vs CPU speedup comparison
 - **Live Middleware** — Type an adversarial prompt and watch it get intercepted in real-time

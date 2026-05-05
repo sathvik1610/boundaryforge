@@ -13,8 +13,10 @@ ENV/
 env.bak/
 venv.bak/
 
-# Project Data (Ignore auto-generated artifacts)
-data/*.json
+# Project Data (Ignore large raw inference artifacts, but track compiled output)
+data/results.json
+data/boundaries.json
+data/timing.json
 
 # IDEs
 .vscode/

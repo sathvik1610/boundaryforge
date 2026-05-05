@@ -19,8 +19,12 @@ def run_boundary_forge():
         print(f"Targeting only {PROBE_COUNT} probes. Run with 'python main.py --production' for the full run.")
     
     
+    import time
     print("\n[1] CrewAI Generating Probes...")
+    t0 = time.time()
     probes = generate_probes(total=PROBE_COUNT)
+    stage1_time = round(time.time() - t0, 1)
+    print(f"    ✅ Generated {len(probes)} probes in {stage1_time}s")
     random.shuffle(probes)
     train, test = probes[:max(1, len(probes)//2)], probes[max(1, len(probes)//2):] # dynamic split for testing
     

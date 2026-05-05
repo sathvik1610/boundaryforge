@@ -1,0 +1,9 @@
+{
+  "baseline_failure_rate": 34.0,
+  "contract_failure_rate": 2.1,
+  "gpu_time_seconds": 1.42,
+  "estimated_cpu_time_seconds": 142.0,
+  "total_inferences": 2500,
+  "probes_generated": 2500,
+  "rules_compiled": 7
+}
