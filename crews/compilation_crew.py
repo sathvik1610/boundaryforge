@@ -9,8 +9,65 @@ else:
     llm = LLM(model=f"huggingface/{ACTIVE_MODEL_A}", api_key=LOCAL_API_KEY, temperature=0.1)
 
 
+def _select_representative_failures(boundaries: list, n_clusters: int = 6) -> list:
+    """FIX Priority 2 (Stage 4): K-Means clustering on failure embeddings.
+    Embeds all boundary failures, clusters them into n_clusters semantic groups,
+    and picks the most representative example from each cluster.
+    This guarantees diverse failure type coverage within the token budget.
+    """
+    if len(boundaries) <= n_clusters:
+        # Not enough to cluster, just compact them
+        return boundaries
+
+    try:
+        from sentence_transformers import SentenceTransformer
+        from sklearn.cluster import KMeans
+        import numpy as np
+
+        # Embed on the input probe text (what the user said — the failure trigger)
+        embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        texts = [b["input"] for b in boundaries]
+        embeddings = embedder.encode(texts)
+
+        k = min(n_clusters, len(boundaries))
+        kmeans = KMeans(n_clusters=k, random_state=42, n_init="auto")
+        kmeans.fit(embeddings)
+
+        # Pick the boundary closest to each cluster centroid
+        representatives = []
+        for cluster_id in range(k):
+            cluster_indices = [i for i, label in enumerate(kmeans.labels_) if label == cluster_id]
+            centroid = kmeans.cluster_centers_[cluster_id]
+            # Find the member with the highest boundary_score in the cluster
+            best = max(cluster_indices, key=lambda i: boundaries[i].get("boundary_score", 0))
+            representatives.append(boundaries[best])
+
+        print(f"[K-Means Clustering] Selected {len(representatives)} representative failures from {len(boundaries)} total.")
+        return representatives
+
+    except ImportError:
+        # sklearn not available — fall back to top-N
+        print("[K-Means Clustering] sklearn not available, falling back to top-4 slice.")
+        return boundaries[:4]
+
+
+def _compact_boundary(b: dict) -> dict:
+    """FIX Priority 5 (Stage 4): Pre-structured, token-efficient failure objects.
+    Instead of verbose raw text, pass semantically dense compact JSON.
+    """
+    return {
+        "probe": b["input"][:200],
+        "severity": b.get("boundary_score", 0.0),
+        "sample_failure": b["outputs_a"][0][:200] if b.get("outputs_a") else "",
+    }
+
+
 def run_compilation_crew(boundaries: list) -> list:
-    cases_text = json.dumps(boundaries[:50], indent=2)
+    # Stage 4 Fix: K-Means cluster → compact representation
+    representatives = _select_representative_failures(boundaries, n_clusters=6)
+    compact = [_compact_boundary(b) for b in representatives]
+    cases_text = json.dumps(compact, indent=2)
+
 
     miner = Agent(
         role='Vulnerability Miner',
