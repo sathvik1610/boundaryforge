@@ -3,6 +3,8 @@ import json
 from litellm import completion
 import sys
 import os
+from config import USE_AMD_SERVER
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -177,6 +179,15 @@ css = """
 *, *::before, *::after { box-sizing: border-box; }
 
 body, .gradio-container { background-color: #F7F8FC !important; color: #0F172A !important; }
+
+/* GRID BACKGROUND */
+body, .gradio-container {
+    background-color: #F7F8FC !important;
+    background-image:
+        linear-gradient(rgba(99,102,241,0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.06) 1px, transparent 1px) !important;
+    background-size: 32px 32px !important;
+}
 
 /* GRADIO UI ICONS */
 .icon, button.icon, .settings-icon { color: #64748B !important; background: transparent !important; }
@@ -514,17 +525,27 @@ function() {
 # ===== BUILD UI =====
 with gr.Blocks(title="Boundary Forge") as demo:
 
-    gr.HTML("""
+
+    badge_html = """
+        <div class="bf-badge">
+            <div class="bf-dot"></div>
+            AMD MI300X &middot; Active
+        </div>
+    """ if USE_AMD_SERVER else """
+        <div class="bf-badge" style="background:#F1F5F9;border-color:#E2E8F0;color:#94A3B8;">
+            <div class="bf-dot" style="background:#CBD5E1;animation:none;"></div>
+            Local Mode &middot; Offline
+        </div>
+    """
+
+    gr.HTML(f"""
     <div class="bf-header">
         <div>
             <p class="bf-eyebrow">Enterprise AI Safety</p>
             <h1 class="bf-wordmark">Boundary<em>Forge</em></h1>
             <p class="bf-desc">Safety contract compiler for production LLM deployments</p>
         </div>
-        <div class="bf-badge">
-            <div class="bf-dot"></div>
-            AMD MI300X &middot; Active
-        </div>
+        {badge_html}
     </div>
     """)
 
