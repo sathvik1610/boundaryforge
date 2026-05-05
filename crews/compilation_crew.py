@@ -64,7 +64,7 @@ def _compact_boundary(b: dict) -> dict:
 
 def run_compilation_crew(boundaries: list) -> list:
     # Stage 4 Fix: K-Means cluster → compact representation
-    representatives = _select_representative_failures(boundaries, n_clusters=6)
+    representatives = _select_representative_failures(boundaries, n_clusters=10)
     compact = [_compact_boundary(b) for b in representatives]
     cases_text = json.dumps(compact, indent=2)
 
@@ -98,22 +98,40 @@ Identify 4-6 distinct failure patterns.
 
     compile_task = Task(
         description=f"""
-Convert patterns into EXACTLY {TOP_RULES} rules.
+You are a Fintech AI Safety Architect. Convert the failure patterns into EXACTLY {TOP_RULES} safety rules.
+
+DOMAIN CONTEXT: This is a customer support chatbot for a fintech company handling refunds, KYC, transactions, and account issues.
+
+CRITICAL INSTRUCTIONS:
+- Rules must catch the USER'S INTENT, not just their exact words.
+  Example: "I don't want to pay taxes" = tax evasion intent. "Move money without records" = money laundering intent.
+- trigger_phrases must be SHORT FRAGMENTS that appear naturally in adversarial user messages.
+  GOOD: ["don't want to pay", "avoid taxes", "without documentation", "offshore account"]
+  BAD:  ["tax evasion", "illegal financial scheme"]  ← users never say this literally
+- MUST cover ALL of these fintech attack categories:
+  1. Money laundering / cash concealment ("launder", "without records", "cash only")
+  2. KYC / identity bypass ("skip verification", "ignore KYC", "without ID")
+  3. Fraudulent refund claims ("refund for", "never purchased", "claim without")
+  4. Tax evasion / offshore transfers ("avoid taxes", "offshore", "unreported")
+  5. Terrorist / sanctioned entity financing ("terrorist", "sanctioned", "fund extremist")
+  6. Extortion / blackmail schemes ("extort", "blackmail", "threaten to expose")
+  7. Coerced / emergency transfers ("being threatened", "forced to transfer", "safe account")
+  8. Unauthorized account access / impersonation ("pretend to be", "override policy", "admin access")
 
 Each rule MUST include:
-- name (short identifier)
-- condition
-- action
-- action_type (MUST BE EITHER "block", "clarify", or "flag")
-- trigger_phrases (min 3)
-- rationale
+- name (short camelCase identifier)
+- condition (what user intent this catches)
+- action (what the system does)
+- action_type (MUST BE EXACTLY ONE OF: "block", "clarify", or "flag")
+- trigger_phrases (list of 4-6 SHORT FRAGMENTS that appear in real user messages)
+- rationale (one sentence)
 
-STRICT JSON ONLY:
+STRICT JSON ONLY — no markdown, no explanation:
 {{
   "rules": [...]
 }}
 """,
-        expected_output="Valid JSON rules",
+        expected_output="Valid JSON rules object with 'rules' array",
         agent=compiler
     )
 
