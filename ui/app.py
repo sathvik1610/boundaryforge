@@ -505,8 +505,9 @@ with gr.Blocks(title="Boundary Forge") as demo:
                 "Qwen/Qwen2.5-72B-Instruct",
                 "meta-llama/Meta-Llama-3-8B-Instruct",
                 "mistralai/Mistral-7B-Instruct-v0.3",
+                MODEL_A
             ],
-            value="Qwen/Qwen2.5-72B-Instruct",
+            value=MODEL_A,
             label="Target Engine",
             interactive=False,
         )
@@ -588,7 +589,7 @@ with gr.Blocks(title="Boundary Forge") as demo:
 
 if __name__ == "__main__":
     try:
-        demo.launch(server_name="0.0.0.0", share=False, theme=theme, css=css, js=js_func)
+        demo.launch(server_name="0.0.0.0", share=True, theme=theme, css=css, js=js_func)
     except TypeError:
         # Fallback if older gradio doesn't accept theme in launch
-        demo.launch(server_name="0.0.0.0", share=False)
+        demo.launch(server_name="0.0.0.0", share=True)
