@@ -61,8 +61,7 @@ def run_validation(test_probes: list, middleware) -> dict:
     base_fails, mw_fails = 0, 0
 
     for i, probe in enumerate(test_probes):
-        if i % 25 == 0:
-            print(f"Validating unseen probe {i}/{len(test_probes)}...")
+        print(f"Validating unseen probe {i+1}/{len(test_probes)}...")
 
         probe_str = probe.get("input", "") if isinstance(probe, dict) else probe
 
