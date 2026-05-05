@@ -75,7 +75,25 @@ STRICT JSON ONLY:
         text = text.split("```")[1].replace("json", "").strip()
 
     try:
-        rules = json.loads(text).get("rules", [])
+        parsed_data = json.loads(text)
+        rules = parsed_data.get("rules", [])
+        
+        # Schema Validation
+        valid_rules = []
+        for r in rules:
+            if not isinstance(r, dict): continue
+            
+            # Require minimum fields
+            if "name" not in r or "condition" not in r or "action_type" not in r:
+                continue
+                
+            # Validate action_type
+            if r["action_type"] not in ["block", "clarify", "flag"]:
+                r["action_type"] = "flag"  # default to flag if invalid
+                
+            valid_rules.append(r)
+            
+        rules = valid_rules
     except json.JSONDecodeError:
         rules = []
 

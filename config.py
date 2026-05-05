@@ -33,7 +33,9 @@ LOCAL_MODEL_B = os.getenv("LOCAL_MODEL_B", "mistralai/Mistral-7B-Instruct-v0.3")
 USE_AMD_SERVER = os.getenv("USE_AMD_SERVER", "False").lower() == "true"
 
 # vLLM requires a dummy key for OpenAI clients
-LOCAL_API_KEY = "sk-dummy" if USE_AMD_SERVER else os.getenv("HUGGINGFACE_API_KEY", "")
+# Hugging Face local inference requires HF_TOKEN or HUGGINGFACE_API_KEY
+hf_token = os.getenv("HF_TOKEN", os.getenv("HUGGINGFACE_API_KEY", ""))
+LOCAL_API_KEY = "sk-dummy" if USE_AMD_SERVER else hf_token
 
 # Active models depend on deployment mode
 ACTIVE_MODEL_A = MODEL_A if USE_AMD_SERVER else LOCAL_MODEL_A

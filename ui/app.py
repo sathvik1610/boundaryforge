@@ -35,11 +35,11 @@ middleware = BoundaryForgeMiddleware(
 
 def get_model_and_base():
     """Always routes to the active model. Dropdown is display-only (API Gateway framing)."""
-    from config import USE_AMD_SERVER, ACTIVE_MODEL_A, MODEL_A
+    from config import USE_AMD_SERVER, ACTIVE_MODEL_A, MODEL_A, VLLM_PORT
     # On AMD: use the production 72B model served by vLLM
     # On local: use the smaller fast model on HF free tier
     mdl = f"openai/{MODEL_A}" if USE_AMD_SERVER else f"huggingface/{ACTIVE_MODEL_A}"
-    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    base = f"http://localhost:{VLLM_PORT}/v1/" if USE_AMD_SERVER else None
     return mdl, base
 
 

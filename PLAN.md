@@ -97,16 +97,17 @@ TOP_RULES = 7
 
 ### Step 3: Start vLLM Servers on AMD GPU
 ```bash
-# Terminal 1 — Primary Reasoning Engine
-python -m vllm.entrypoints.openai.api_server \
-  --model Qwen/Qwen2.5-72B-Instruct \
-  --port 8001 \
-  --tensor-parallel-size 4
+# Export the Hugging Face token required by vLLM for weight downloads
+export HF_TOKEN="hf_your_real_key_here"
 
-# Terminal 2 — Divergence Engine
-python -m vllm.entrypoints.openai.api_server \
-  --model mistralai/Mistral-7B-Instruct-v0.3 \
-  --port 8002
+# Terminal 1 — Primary Engine
+python3 -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-72B-Instruct \
+  --port 8000 \
+  --gpu-memory-utilization 0.90 \
+  --max-model-len 8192 \
+  --dtype bfloat16 \
+  --trust-remote-code
 ```
 
 ### Step 4: `crews/generation_crew.py`

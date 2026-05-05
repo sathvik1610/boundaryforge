@@ -44,6 +44,8 @@ async def process_batch(batch, batch_id):
 
     tasks = []
     for probe in batch:
+        # AMD Mode: Uses single model, divergence is simulated via high/low temperature on MODEL_A
+        # Local HF Mode: Uses MODEL_A (Qwen) vs MODEL_B (Mistral)
         run_model_a = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
         run_model_b = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_B
 
