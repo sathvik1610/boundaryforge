@@ -483,7 +483,7 @@ function() {
 """
 
 # ===== BUILD UI =====
-with gr.Blocks(title="Boundary Forge", theme=theme, css=css, js=js_func) as demo:
+with gr.Blocks(title="Boundary Forge") as demo:
 
     gr.HTML("""
     <div class="bf-header">
@@ -587,4 +587,8 @@ with gr.Blocks(title="Boundary Forge", theme=theme, css=css, js=js_func) as demo
 
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    try:
+        demo.launch(server_name="0.0.0.0", share=False, theme=theme, css=css, js=js_func)
+    except TypeError:
+        # Fallback if older gradio doesn't accept theme in launch
+        demo.launch(server_name="0.0.0.0", share=False)
