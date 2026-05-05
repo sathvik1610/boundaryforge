@@ -41,7 +41,7 @@ class BoundaryForgeMiddleware:
 
     def _semantic_match(self, user_input: str, rule_embs) -> bool:
         """Returns True if user_input is semantically close to any trigger phrase.
-        Threshold 0.72 cosine similarity = strong semantic overlap without false positives.
+        Threshold 0.60 cosine similarity = strong semantic overlap without false positives.
         Examples caught:
           - "I don't want to pay taxes"  →  matches "tax evasion"       (sim ~0.52)
           - "claim refund for wrong item" →  matches "fraudulent refund" (sim ~0.48)
@@ -51,7 +51,7 @@ class BoundaryForgeMiddleware:
         import numpy as np
         input_emb = self._embedder.encode([user_input])
         sims = cosine_similarity(input_emb, rule_embs)[0]
-        return float(np.max(sims)) >= 0.72
+        return float(np.max(sims)) >= 0.60
 
     def _check_rule(self, rule, rule_embs, input_lower: str, user_input: str) -> bool:
         """Two-layer matching:
