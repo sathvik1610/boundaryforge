@@ -165,16 +165,48 @@ BOUNDARY_THRESHOLD=0.20
 HF_TOKEN=hf_your_token_here
 ```
 
-### Step 3: Run the Production Pipeline (Terminal 2)
+### Step 3: Run the Pipeline (Terminal 2)
 ```bash
 source bf_env/bin/activate
+```
 
-# Full 2,500-probe production run
+#### 🔵 Option A — Run from Scratch (First time, fresh server)
+Use this when you have **no existing data** and need to run the full pipeline end-to-end.
+```bash
 python main.py --production
+```
+**What it does:**
+| Stage | Action | Time |
+|---|---|---|
+| 1 | CrewAI generates 2,500 adversarial probes | ~2 min |
+| 2 | AMD MI300X blasts all probes at Qwen 72B (10,000 inferences) | ~7 min |
+| 3 | Math engine extracts boundary failures | Instant |
+| 4 | CrewAI compiles the safety contract | ~2 min |
+| 5 | Async validation generates final metrics | ~1 min |
 
-# OR: Resume compilation from existing boundary data (skips GPU inference)
+**Creates:** `data/results.json`, `data/boundaries.json`, `data/contract.json`, `data/final_metrics.json`
+
+---
+
+#### 🟢 Option B — Resume (GPU already ran, just need the contract)
+Use this when **Stage 2 already completed** and `data/boundaries.json` exists on disk.
+This is the go-to command when the pipeline crashed at compilation/validation and you don't want to wait 15 minutes for the GPU to re-run.
+```bash
 python resume.py
 ```
+**What it does:**
+| Stage | Action | Time |
+|---|---|---|
+| ❌ 1 | Skipped | — |
+| ❌ 2 | Skipped | — |
+| ❌ 3 | Skipped | — |
+| ✅ 4 | Loads `data/boundaries.json` → K-Means → CrewAI compiles contract | ~2 min |
+| ✅ 5 | Async validation generates fresh metrics | ~1 min |
+
+**Requires:** `data/boundaries.json` must exist  
+**Creates:** `data/contract.json`, `data/final_metrics.json`
+
+> **Rule of thumb:** First time on a new server → `main.py --production`. GPU already ran and you need to fix/recompile → `resume.py`.
 
 ### Step 4: Launch the Dashboard
 ```bash
