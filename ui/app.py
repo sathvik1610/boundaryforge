@@ -47,6 +47,26 @@ def get_model_and_base():
 def chat(user_input, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", ""
+        
+    # --- HF SPACE DEMO MOCK LOGIC ---
+    if os.environ.get("HF_SPACE_DEMO") == "true":
+        match_found, action, rule = False, "passed", None
+        for r in middleware.contract.get("rules", []):
+            if middleware._exact_match(user_input, r["trigger_phrases"]):
+                match_found, action, rule = True, r["action"], r["name"]
+                break
+        if not match_found:
+            sim = middleware._semantic_match(user_input)
+            if sim:
+                match_found, action, rule = True, sim["action"], sim["name"]
+                
+        if match_found:
+            msg = f"Blocked: Policy violation ({rule})" if action == "block" else f"Clarify/Flag: Triggered '{rule}'"
+            return f"🚨 BLOCKED by Sentinel: {msg}", f"Action: {action}\nRule: {rule}"
+        else:
+            return "✅ SAFE. (Note: Qwen 72B inference is disabled in this public demo to save compute, but your prompt passed the safety firewall!)", "Action: passed\nRule: None"
+
+    # --- ORIGINAL PRODUCTION LOGIC ---
     from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
     active = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
     result = middleware.process(user_input, model_name=active)
@@ -57,6 +77,15 @@ def chat(user_input, model_name):
 def compare(query, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", "", ""
+        
+    # --- HF SPACE DEMO MOCK LOGIC ---
+    if os.environ.get("HF_SPACE_DEMO") == "true":
+        base_text = "🚫 Baseline LLM inference disabled in HF Space Demo mode to save compute."
+        res, status = chat(query, model_name)
+        action = status.split("\\n")[0].replace("Action: ", "")
+        return base_text, res, action
+
+    # --- ORIGINAL PRODUCTION LOGIC ---
     try:
         from engine.middleware import SYSTEM_PROMPT
         mdl, base = get_model_and_base()
