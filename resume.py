@@ -12,8 +12,15 @@ def resume_compilation():
     print(f"Loaded {len(boundaries)} boundaries.")
     
     print("\n[2] CrewAI Hierarchical Compilation...")
-    # Cap at top 8 to avoid 4096 context length limits!
-    rules = run_compilation_crew(boundaries[:8])
+    # Truncate text to avoid 4096 context length limits!
+    short_boundaries = []
+    for b in boundaries[:4]:
+        short_b = b.copy()
+        short_b["outputs_a"] = [t[:300] + "..." for t in b["outputs_a"]]
+        short_b["output_b"] = b["output_b"][:300] + "..."
+        short_boundaries.append(short_b)
+        
+    rules = run_compilation_crew(short_boundaries)
     
     print("\n[3] Validating Contract via Middleware...")
     middleware = BoundaryForgeMiddleware()
