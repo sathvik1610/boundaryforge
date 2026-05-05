@@ -2,7 +2,7 @@ import os
 import litellm
 from litellm import completion
 
-key = os.getenv("HUGGINGFACE_API_KEY", "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")
+key = os.getenv("HUGGINGFACE_API_KEY", "")
 
 try:
     print("Testing native LiteLLM HuggingFace...")
