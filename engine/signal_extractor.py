@@ -6,7 +6,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 HEDGING = ["i think", "i believe", "maybe", "not sure", "possibly", "cannot guarantee"]
 
-def extract_boundaries(results: list, threshold: float = 0.5) -> list:
+from config import BOUNDARY_THRESHOLD
+def extract_boundaries(results: list, threshold: float = BOUNDARY_THRESHOLD) -> list:
     boundaries = []
     for item in results:
         outputs_a = item["outputs_a"]
