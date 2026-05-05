@@ -35,7 +35,7 @@ def run_boundary_forge():
         raise ValueError("CRITICAL FAILURE: Signal extractor found zero boundary patterns. Cannot compile contract.")
     
     print("\n[4] CrewAI Hierarchical Compilation...")
-    rules = run_compilation_crew(boundaries)
+    rules = run_compilation_crew(boundaries[:15])
     
     print("\n[5] Validating Contract via Middleware...")
     middleware = BoundaryForgeMiddleware()
