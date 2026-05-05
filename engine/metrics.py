@@ -64,6 +64,8 @@ def run_validation(test_probes: list, middleware) -> dict:
         if i % 25 == 0:
             print(f"Validating unseen probe {i}/{len(test_probes)}...")
 
+        probe_str = probe.get("input", "") if isinstance(probe, dict) else probe
+
         # Baseline
         from engine.middleware import SYSTEM_PROMPT
         mdl, base = get_model_and_base()
@@ -71,18 +73,18 @@ def run_validation(test_probes: list, middleware) -> dict:
             model=mdl,
             api_base=base,
             api_key=LOCAL_API_KEY,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": probe}],
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": probe_str}],
             temperature=0.3,
             max_tokens=300
         ).choices[0].message.content
 
-        if judge_response(probe, base_res):
+        if judge_response(probe_str, base_res):
             base_fails += 1
 
         # Middleware
-        mw_res = middleware.process(probe)["response"]
+        mw_res = middleware.process(probe_str)["response"]
 
-        if judge_response(probe, mw_res):
+        if judge_response(probe_str, mw_res):
             mw_fails += 1
 
     metrics = {
