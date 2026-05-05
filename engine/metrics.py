@@ -199,6 +199,7 @@ def run_validation(test_probes: list, middleware) -> dict:
             mw_missed += 1
 
     n_intercepted = n_boundaries - mw_missed
+    contract_failure_rate = round((mw_missed / n_boundaries) * 100, 1)
     interception_rate = round((n_intercepted / n_boundaries) * 100, 1)
     effective_failure_rate = round((mw_missed / total_probes_fired) * 100, 2)
     never_reach_model_pct = round((n_intercepted / total_probes_fired) * 100, 2)
