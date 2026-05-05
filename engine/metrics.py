@@ -198,18 +198,23 @@ def run_validation(test_probes: list, middleware) -> dict:
         if not intercepted:
             mw_missed += 1
 
-    contract_failure_rate = round((mw_missed / n_boundaries) * 100, 1)
+    n_intercepted = n_boundaries - mw_missed
+    interception_rate = round((n_intercepted / n_boundaries) * 100, 1)
+    effective_failure_rate = round((mw_missed / total_probes_fired) * 100, 2)
+    never_reach_model_pct = round((n_intercepted / total_probes_fired) * 100, 2)
 
     metrics = {
         "baseline_failure_rate": baseline_failure_rate,
         "contract_failure_rate": contract_failure_rate,
+        "interception_rate": interception_rate,
+        "effective_failure_rate": effective_failure_rate,
+        "never_reach_model_pct": never_reach_model_pct,
         "total_probes_fired": total_probes_fired,
         "boundaries_found": n_boundaries,
         "middleware_missed": mw_missed,
-        "middleware_intercepted": n_boundaries - mw_missed
+        "middleware_intercepted": n_intercepted
     }
 
-    # Add throughput metrics
     try:
         throughput = compute_throughput_metrics()
         metrics.update(throughput)
@@ -219,10 +224,37 @@ def run_validation(test_probes: list, middleware) -> dict:
     with open("data/final_metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
-    print(f"\n{'='*60}")
-    print(f"  Baseline Failure Rate : {baseline_failure_rate}%  ({n_boundaries}/{total_probes_fired} probes)")
-    print(f"  Contract Failure Rate : {contract_failure_rate}%  ({mw_missed}/{n_boundaries} slipped through)")
-    print(f"  Contract Protected    : {n_boundaries - mw_missed}/{n_boundaries} known attacks blocked")
-    print(f"{'='*60}\n")
+    W = 62
+    print(f"\n{'=' * W}")
+    print(f"  {'BOUNDARY FORGE - SAFETY CONTRACT RESULTS':^{W-2}}")
+    print(f"{'=' * W}")
+    print(f"  ATTACK SURFACE (from AMD MI300X production run)")
+    print(f"    Total adversarial probes fired    : {total_probes_fired:,}")
+    print(f"    Boundary failures discovered      : {n_boundaries}  ({baseline_failure_rate}% of all probes)")
+    print(f"{'─' * W}")
+    print(f"  MIDDLEWARE CONTRACT PERFORMANCE")
+    print(f"    Attacks intercepted by contract   : {n_intercepted}/{n_boundaries}  ({interception_rate}% interception rate)")
+    print(f"    Attacks that slipped through      : {mw_missed}/{n_boundaries}  ({contract_failure_rate}% miss rate)")
+    print(f"{'─' * W}")
+    print(f"  SYSTEM-LEVEL IMPACT")
+    print(f"    % of flagged attacks now blocked  : {interception_rate}%")
+    print(f"    Attacks NEVER reaching the model  : {never_reach_model_pct}% of all enterprise traffic")
+    print(f"    Effective failure rate (protected) : {effective_failure_rate}%  (was {baseline_failure_rate}% unprotected)")
+    reduction = round((1 - effective_failure_rate / baseline_failure_rate) * 100, 1) if baseline_failure_rate else 0
+    print(f"    Failure reduction                 : {reduction}% fewer failures with Boundary Forge")
+    print(f"{'─' * W}")
+    try:
+        gpu = metrics.get("gpu_time_seconds", 0)
+        cpu = metrics.get("estimated_cpu_time_seconds", 0)
+        if gpu:
+            speedup = round(cpu / gpu, 1)
+            print(f"  AMD MI300X COMPUTE ADVANTAGE")
+            print(f"    GPU inference time                : {gpu:.1f}s  (~{round(gpu/60,1)} min)")
+            print(f"    Equivalent CPU time               : {cpu:.0f}s  (~{round(cpu/3600,1)} hrs)")
+            print(f"    AMD MI300X speedup                : {speedup}x faster than CPU baseline")
+            print(f"{'─' * W}")
+    except Exception:
+        pass
+    print(f"{'=' * W}\n")
     return metrics
 

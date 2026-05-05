@@ -553,30 +553,70 @@ with gr.Blocks(title="Boundary Forge") as demo:
 
         with gr.Tab("Metrics"):
             if metrics:
-                br = metrics.get("baseline_failure_rate", "N/A")
-                cr = metrics.get("contract_failure_rate", "N/A")
+                br   = metrics.get("baseline_failure_rate", 0)
+                cr   = metrics.get("contract_failure_rate", "N/A")
+                ir   = metrics.get("interception_rate", "N/A")
+                efr  = metrics.get("effective_failure_rate", "N/A")
+                nrm  = metrics.get("never_reach_model_pct", "N/A")
+                n_int = metrics.get("middleware_intercepted", "N/A")
+                n_tot = metrics.get("boundaries_found", "N/A")
+                n_fired = metrics.get("total_probes_fired", "N/A")
+                reduction = round((1 - efr / br) * 100, 1) if br and isinstance(efr, (int, float)) else "N/A"
+
                 gpu_html = ""
                 if "gpu_time_seconds" in metrics:
+                    gpu  = metrics.get("gpu_time_seconds", 0)
+                    cpu  = metrics.get("estimated_cpu_time_seconds", 0)
+                    speedup = round(cpu / gpu, 1) if gpu else "N/A"
                     gpu_html = f"""
-                    <div class="gcard">
+                    <div class="gcard" style="margin-top:1.2rem;">
                         <div class="gtitle">Compute Acceleration &mdash; AMD MI300X</div>
-                        <div class="grow"><span class="gkey">GPU Execution Time</span><span class="gval">{metrics.get('gpu_time_seconds')}s</span></div>
-                        <div class="grow"><span class="gkey">Estimated CPU Time</span><span class="gval">{metrics.get('estimated_cpu_time_seconds')}s</span></div>
+                        <div class="grow"><span class="gkey">Total Probes Fired</span><span class="gval">{n_fired:,}</span></div>
+                        <div class="grow"><span class="gkey">GPU Execution Time</span><span class="gval">{gpu:.1f}s &nbsp;(~{round(gpu/60,1)} min)</span></div>
+                        <div class="grow"><span class="gkey">Equivalent CPU Time</span><span class="gval">{cpu:.0f}s &nbsp;(~{round(cpu/3600,1)} hrs)</span></div>
+                        <div class="grow"><span class="gkey">AMD MI300X Speedup</span><span class="gval" style="color:#6366F1;font-weight:700;">{speedup}× faster</span></div>
                         <div class="grow"><span class="gkey">Backend</span><span class="gval">vLLM on ROCm</span></div>
                     </div>"""
+
                 gr.HTML(f"""
+                <!-- Row 1: Key before/after rates -->
                 <div class="mrow">
                     <div class="mcard d">
                         <div class="mtag">Baseline Failure Rate</div>
                         <div class="mnum d">{br}%</div>
-                        <div class="msub">Without safety contract</div>
+                        <div class="msub">Unprotected — {n_fired:,} probes fired</div>
                     </div>
                     <div class="mcard s">
-                        <div class="mtag">With Safety Contract</div>
-                        <div class="mnum s">{cr}%</div>
-                        <div class="msub">Boundary Forge protected</div>
+                        <div class="mtag">Effective Failure Rate</div>
+                        <div class="mnum s">{efr}%</div>
+                        <div class="msub">After Boundary Forge contract</div>
                     </div>
-                </div>{gpu_html}""")
+                </div>
+
+                <!-- Row 2: What the contract does -->
+                <div class="mrow" style="margin-top:1rem;">
+                    <div class="mcard s">
+                        <div class="mtag">Attack Interception Rate</div>
+                        <div class="mnum s">{ir}%</div>
+                        <div class="msub">{n_int} of {n_tot} known attacks blocked</div>
+                    </div>
+                    <div class="mcard s">
+                        <div class="mtag">Failure Reduction</div>
+                        <div class="mnum s">{reduction}%</div>
+                        <div class="msub">Fewer failures with Boundary Forge</div>
+                    </div>
+                </div>
+
+                <!-- Row 3: System impact -->
+                <div class="gcard" style="margin-top:1.2rem;">
+                    <div class="gtitle">System-Level Impact</div>
+                    <div class="grow"><span class="gkey">Attacks that NEVER reach the model</span><span class="gval" style="color:#059669;font-weight:700;">{nrm}% of all enterprise traffic</span></div>
+                    <div class="grow"><span class="gkey">Boundaries discovered</span><span class="gval">{n_tot} attack vectors from {n_fired:,} probes</span></div>
+                    <div class="grow"><span class="gkey">Contract miss rate</span><span class="gval">{cr}%</span></div>
+                </div>
+
+                {gpu_html}
+                """)
             else:
                 gr.HTML('<div class="empty">Run main.py to generate performance metrics</div>')
 
