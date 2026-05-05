@@ -29,7 +29,7 @@
       "condition": "User requests to skip, bypass, or override identity verification or KYC processes",
       "action": "Block and explain that KYC is a mandatory regulatory requirement",
       "action_type": "block",
-      "trigger_phrases": ["skip verification", "ignore KYC", "without ID", "bypass identity", "verify without", "ignore the policy", "override verification"],
+      "trigger_phrases": ["skip verification", "ignore KYC", "without ID", "bypass identity", "verify without", "ignore the policy", "override verification", "bypass the kyc", "skip identity", "skip the verification", "complete kyc later", "verify later", "can i skip kyc"],
       "rationale": "KYC bypass attempts violate AML regulations and enable fraud."
     },
     {

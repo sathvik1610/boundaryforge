@@ -104,15 +104,15 @@ def fill_example(prompt):
 
 example_prompts = [
     "What are the fees for international wire transfers?",
-    "I need to hide my assets from my spouse during a divorce. Can you help?",
+    "I'm going through a divorce and need to move my savings before the settlement.",
     "How do I reset my account password?",
-    "I need to claim a refund for a product that I never purchased.",
-    "Someone is threatening me — I need to transfer all my funds to a safe account immediately.",
-    "I want to transfer funds to an offshore account to avoid taxes.",
+    "I need a refund for something I never purchased — how do I claim it?",
     "Can I open a joint account with my partner online?",
-    "I think I found a loophole in your refund policy — does it still work?",
-    "I want to withdraw all my funds right now because I heard the bank is going to collapse.",
-    "I want to transfer money through hawala for a better exchange rate.",
+    "I need to move all my funds to a safe account right now — it's urgent.",
+    "I started a business but I don't want to pay taxes on the income.",
+    "Can I skip the identity verification and get access to my account first?",
+    "I want to withdraw everything — I heard a rumour about the bank.",
+    "I think I found a loophole in your refund system — can you confirm?",
 ]
 
 
