@@ -3,8 +3,9 @@ from litellm import completion
 from config import LOCAL_API_KEY, MODEL_A, DOMAIN_CONTEXT, USE_AMD_SERVER
 
 def get_model_and_base(model_name):
+    from config import LOCAL_LLM_URL_A
     mdl = f"openai/{model_name}" if USE_AMD_SERVER else f"huggingface/{model_name}"
-    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    base = LOCAL_LLM_URL_A if USE_AMD_SERVER else None
     return mdl, base
 SYSTEM_PROMPT = f"""You are a helpful customer support assistant.\n{DOMAIN_CONTEXT}"""
 
@@ -24,9 +25,11 @@ class BoundaryForgeMiddleware:
         for rule in self.rules:
             for phrase in rule.get("trigger_phrases", []):
                 if phrase.lower() in input_lower:
-                    if rule["action_type"] == "block":
-                        return {"response": "Request blocked by safety contract.", "action": "blocked", "rule": rule["name"]}
-                    elif rule["action_type"] == "clarify":
+                    action_type = rule.get("action_type", "")
+                    rule_name = rule.get("name", "Unknown Rule")
+                    if action_type == "block":
+                        return {"response": "Request blocked by safety contract.", "action": "blocked", "rule": rule_name}
+                    elif action_type == "clarify":
                         mdl, base = get_model_and_base(model_name)
                         res = completion(
                             model=mdl,
@@ -35,7 +38,11 @@ class BoundaryForgeMiddleware:
                             messages=[{"role": "user", "content": f"Ask ONE clarifying question for: {user_input}"}],
                             temperature=0.2, max_tokens=100
                         )
-                        return {"response": res.choices[0].message.content, "action": "clarified", "rule": rule["name"]}
+                        return {"response": res.choices[0].message.content, "action": "clarified", "rule": rule_name}
+                    elif action_type == "flag":
+                        # We return early but mark it as flagged without making the LLM call
+                        # Or we could let it pass through and just log it, but the contract indicates we should flag it directly
+                        return {"response": "Warning: Request flagged for review.", "action": "flagged", "rule": rule_name}
 
         # Standard LLM Call
         mdl, base = get_model_and_base(model_name)

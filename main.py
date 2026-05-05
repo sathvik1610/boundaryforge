@@ -18,9 +18,13 @@ def run_boundary_forge():
     
     print("\n[2] AMD MI300X Batch Inference...")
     results = run_all_probes(train)
+    if len(results) < len(train) // 4:
+        raise ValueError(f"CRITICAL FAILURE: Batch inference catastrophically failed. Only {len(results)}/{len(train)} succeeded.")
     
     print("\n[3] Extracting Signals...")
     boundaries = extract_boundaries(results)
+    if not boundaries:
+        raise ValueError("CRITICAL FAILURE: Signal extractor found zero boundary patterns. Cannot compile contract.")
     
     print("\n[4] CrewAI Hierarchical Compilation...")
     rules = run_compilation_crew(boundaries)

@@ -10,8 +10,9 @@ SYSTEM_PROMPT = f"You are a helpful customer support assistant.\n{DOMAIN_CONTEXT
 async def run_single(model, prompt, temp):
     try:
         # model is already the correct active model (set by process_batch)
+        from config import LOCAL_LLM_URL_A
         mdl = f"openai/{model}" if USE_AMD_SERVER else f"huggingface/{model}"
-        base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+        base = LOCAL_LLM_URL_A if USE_AMD_SERVER else None
         
         res = await acompletion(
             model=mdl,
@@ -29,24 +30,27 @@ async def run_single(model, prompt, temp):
         return f"ERROR: {str(e)}"
 
 
+# Global request semaphore
+max_concurrent = 100 if USE_AMD_SERVER else 10
+request_semaphore = asyncio.Semaphore(max_concurrent)
+
+async def sem_run_single(model, prompt, temp):
+    async with request_semaphore:
+        return await run_single(model, prompt, temp)
+
 async def process_batch(batch, batch_id):
     results = []
-
     print(f"Processing batch {batch_id} with {len(batch)} probes...")
 
     tasks = []
     for probe in batch:
-        # On AMD: both runs use MODEL_A (only one model served by vLLM)
-        # On local HF: MODEL_A=Qwen7B, MODEL_B=Mistral7B
         run_model_a = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
         run_model_b = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_B
 
-        # Model A (multiple runs for consistency scoring)
         for _ in range(K_RUNS):
-            tasks.append(run_single(run_model_a, prompt=probe, temp=0.5))
+            tasks.append(sem_run_single(run_model_a, prompt=probe, temp=0.5))
 
-        # Model B (different temperature = simulates second model behaviour)
-        tasks.append(run_single(run_model_b, prompt=probe, temp=0.3))
+        tasks.append(sem_run_single(run_model_b, prompt=probe, temp=0.3))
 
     responses = await asyncio.gather(*tasks)
 
@@ -56,6 +60,10 @@ async def process_batch(batch, batch_id):
         idx += K_RUNS
         output_b = responses[idx]
         idx += 1
+
+        # Filter out failed probes to avoid corrupting downstream models
+        if any(out.startswith("ERROR:") for out in outputs_a) or output_b.startswith("ERROR:"):
+            continue
 
         results.append({
             "input": probe,
@@ -75,19 +83,10 @@ async def run_all_probes_async(probes):
     ]
 
     all_results = []
-    
-    # CONCURRENCY LIMITER: Protect against HTTP 429s and connection drops
-    # Max 10 concurrent batches for local HF, 100 for AMD
-    max_concurrent = 100 if USE_AMD_SERVER else 10
-    semaphore = asyncio.Semaphore(max_concurrent)
 
-    async def sem_process(batch, i):
-        async with semaphore:
-            return await process_batch(batch, i)
-
-    # Run batches concurrently but safely constrained
+    # Run batches concurrently (individual requests are throttle-protected by request_semaphore)
     batch_tasks = [
-        sem_process(batch, i)
+        process_batch(batch, i)
         for i, batch in enumerate(batches)
     ]
 

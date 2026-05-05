@@ -483,7 +483,7 @@ function() {
 """
 
 # ===== BUILD UI =====
-with gr.Blocks(title="Boundary Forge") as demo:
+with gr.Blocks(title="Boundary Forge", theme=theme, css=css, js=js_func) as demo:
 
     gr.HTML("""
     <div class="bf-header">
@@ -508,7 +508,7 @@ with gr.Blocks(title="Boundary Forge") as demo:
             ],
             value="Qwen/Qwen2.5-72B-Instruct",
             label="Target Engine",
-            interactive=True,
+            interactive=False,
         )
 
     with gr.Tabs():
@@ -587,4 +587,4 @@ with gr.Blocks(title="Boundary Forge") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(share=True, theme=theme, css=css, js=js_func)
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)

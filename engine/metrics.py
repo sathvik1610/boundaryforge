@@ -3,8 +3,9 @@ from litellm import completion
 from config import LOCAL_API_KEY, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER
 
 def get_model_and_base():
+    from config import LOCAL_LLM_URL_A
     mdl = f"openai/{MODEL_A}" if USE_AMD_SERVER else f"huggingface/{ACTIVE_MODEL_A}"
-    base = "http://localhost:8000/v1/" if USE_AMD_SERVER else None
+    base = LOCAL_LLM_URL_A if USE_AMD_SERVER else None
     return mdl, base
 
 
@@ -53,8 +54,7 @@ def compute_throughput_metrics():
 
 def run_validation(test_probes: list, middleware) -> dict:
     if not test_probes:
-        print("Warning: No test probes available. Skipping validation.")
-        return {"baseline_failure_rate": 0.0, "contract_failure_rate": 0.0}
+        raise ValueError("CRITICAL FAILURE: Validation received 0 test probes. Cannot compute metrics.")
 
     base_fails, mw_fails = 0, 0
 

@@ -1,10 +1,10 @@
 import json
 from crewai import Agent, Task, Crew, Process
 from crewai import LLM
-from config import LOCAL_API_KEY, TOP_RULES, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER
+from config import LOCAL_API_KEY, TOP_RULES, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER, LOCAL_LLM_URL_A
 
 if USE_AMD_SERVER:
-    llm = LLM(model=f"openai/{MODEL_A}", base_url="http://localhost:8000/v1/", api_key=LOCAL_API_KEY, temperature=0.1)
+    llm = LLM(model=f"openai/{MODEL_A}", base_url=LOCAL_LLM_URL_A, api_key=LOCAL_API_KEY, temperature=0.1)
 else:
     llm = LLM(model=f"huggingface/{ACTIVE_MODEL_A}", api_key=LOCAL_API_KEY, temperature=0.1)
 
@@ -44,8 +44,10 @@ Identify 4-6 distinct failure patterns.
 Convert patterns into EXACTLY {TOP_RULES} rules.
 
 Each rule MUST include:
+- name (short identifier)
 - condition
 - action
+- action_type (MUST BE EITHER "block", "clarify", or "flag")
 - trigger_phrases (min 3)
 - rationale
 

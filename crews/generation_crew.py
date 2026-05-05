@@ -1,10 +1,10 @@
 import json
 from crewai import Agent, Task, Crew, Process
 from crewai import LLM
-from config import LOCAL_API_KEY, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER, DOMAIN_CONTEXT
+from config import LOCAL_API_KEY, MODEL_A, ACTIVE_MODEL_A, USE_AMD_SERVER, DOMAIN_CONTEXT, LOCAL_LLM_URL_A
 
 if USE_AMD_SERVER:
-    llm = LLM(model=f"openai/{MODEL_A}", base_url="http://localhost:8000/v1/", api_key=LOCAL_API_KEY, temperature=0.8)
+    llm = LLM(model=f"openai/{MODEL_A}", base_url=LOCAL_LLM_URL_A, api_key=LOCAL_API_KEY, temperature=0.8)
 else:
     llm = LLM(model=f"huggingface/{ACTIVE_MODEL_A}", api_key=LOCAL_API_KEY, temperature=0.8)
 
@@ -38,8 +38,9 @@ def build_generation_crew(batch_size: int) -> Crew:
 
 def generate_probes(total: int = 2500) -> list:
     all_probes = []
+    import math
     batch_size = min(50, total)
-    batches_needed = max(1, total // 50)
+    batches_needed = math.ceil(total / batch_size) if total > 0 else 1
     crew = build_generation_crew(batch_size)
 
     for i in range(batches_needed):
@@ -49,12 +50,19 @@ def generate_probes(total: int = 2500) -> list:
             text = str(result).strip()
             if text.startswith("```"):
                 text = text.split("```")[1].replace("json", "").strip()
-            all_probes.extend(json.loads(text))
+            parsed = json.loads(text)
+            if isinstance(parsed, list):
+                all_probes.extend(parsed)
         except Exception as e:
             print(f"Parse error in batch {i+1}, skipping. Error: {e}")
     
     all_probes = list(set(all_probes))
     print(f"Total unique probes generated: {len(all_probes)}")
+    
+    # HARD STOP
+    if len(all_probes) < max(1, total // 4):
+        raise ValueError(f"CRITICAL FAILURE: Only generated {len(all_probes)} probes, expected at least {total//4}. Aborting to prevent empty contract.")
+
     with open("data/probes.json", "w") as f:
         json.dump(all_probes, f, indent=2)
     return all_probes
