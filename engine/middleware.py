@@ -87,17 +87,21 @@ class BoundaryForgeMiddleware:
                         "rule": rule_name
                     }
                 elif action_type == "clarify":
-                    mdl, base = get_model_and_base(model_name)
-                    res = completion(
-                        model=mdl,
-                        api_base=base,
-                        api_key=LOCAL_API_KEY,
-                        messages=[{"role": "user", "content": f"Ask ONE clarifying question for: {user_input}"}],
-                        temperature=0.2,
-                        max_tokens=100
-                    )
+                    try:
+                        mdl, base = get_model_and_base(model_name)
+                        res = completion(
+                            model=mdl,
+                            api_base=base,
+                            api_key=LOCAL_API_KEY,
+                            messages=[{"role": "user", "content": f"Ask ONE clarifying question for: {user_input}"}],
+                            temperature=0.2,
+                            max_tokens=100
+                        )
+                        clarify_text = res.choices[0].message.content
+                    except Exception:
+                        clarify_text = "Could you provide more context about your request?"
                     return {
-                        "response": res.choices[0].message.content,
+                        "response": clarify_text,
                         "action": "clarified",
                         "rule": rule_name
                     }
@@ -109,19 +113,22 @@ class BoundaryForgeMiddleware:
                     }
 
         # No rule matched — make the standard LLM call
-        mdl, base = get_model_and_base(model_name)
-        res = completion(
-            model=mdl,
-            api_base=base,
-            api_key=LOCAL_API_KEY,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_input}
-            ],
-            temperature=0.3,
-            max_tokens=300
-        )
-        output = res.choices[0].message.content
+        try:
+            mdl, base = get_model_and_base(model_name)
+            res = completion(
+                model=mdl,
+                api_base=base,
+                api_key=LOCAL_API_KEY,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_input}
+                ],
+                temperature=0.3,
+                max_tokens=300
+            )
+            output = res.choices[0].message.content
+        except Exception:
+            output = "[LLM unavailable in local mode]"
 
         # Post-Filter: flag high-uncertainty responses
         hedges = sum(1 for h in ["i think", "maybe", "not sure"] if h in output.lower())

@@ -241,7 +241,9 @@ def run_validation(test_probes: list, middleware) -> dict:
     try:
         with open("data/results.json") as f:
             results_data = json.load(f)
-        total_probes_fired = len(results_data.get("results", test_probes))
+        fired = len(results_data.get("results", []))
+        if fired > 0:
+            total_probes_fired = fired
     except Exception:
         pass  # use len(test_probes) as fallback
 
@@ -250,10 +252,8 @@ def run_validation(test_probes: list, middleware) -> dict:
     baseline_failure_rate = round((n_boundaries / total_probes_fired) * 100, 2)
 
     # ── Contract Rate ─────────────────────────────────────────────────────────
-    # Test every known boundary probe against the middleware
-    # If the contract intercepts it (block/clarify/flag) → protected
-    # If it passes through unhandled → contract missed it
     mw_missed = 0
+    missed_prompts = []
     print(f"[Contract Validation] Testing {n_boundaries} known failures against the safety contract...")
     for i, probe in enumerate(test_probes):
         probe_str = probe.get("input", "") if isinstance(probe, dict) else probe
@@ -261,10 +261,17 @@ def run_validation(test_probes: list, middleware) -> dict:
         mw_res = middleware.process(probe_str)
         action = mw_res.get("action", "none")
         intercepted = action in ["blocked", "clarified", "flagged"]
-        status = "✅ INTERCEPTED" if intercepted else "❌ MISSED"
-        print(f"  [{i+1}/{n_boundaries}] Score={score:.3f} | {status} ({action}) | {probe_str[:60]}...")
+        status = "INTERCEPTED" if intercepted else "MISSED"
+        print(f"  [{i+1}/{n_boundaries}] Score={score:.3f} | {'[OK]' if intercepted else '[!!]'} {status} ({action}) | {probe_str[:60]}...")
         if not intercepted:
             mw_missed += 1
+            missed_prompts.append((i + 1, probe_str))
+
+    if missed_prompts:
+        print(f"\n--- MISSED PROMPTS (full text) ---")
+        for idx, prompt in missed_prompts:
+            print(f"  [{idx}] {prompt}")
+        print(f"---------------------------------\n")
 
     n_intercepted = n_boundaries - mw_missed
     contract_failure_rate = round((mw_missed / n_boundaries) * 100, 1)
@@ -303,23 +310,23 @@ def run_validation(test_probes: list, middleware) -> dict:
     print(f"  ATTACK SURFACE (from AMD MI300X production run)")
     print(f"    Total adversarial probes fired    : {total_probes_fired:,}")
     print(f"    Boundary failures discovered      : {n_boundaries}  ({baseline_failure_rate}% of all probes)")
-    print(f"{'─' * W}")
+    print(f"{'-' * W}")
     print(f"  MIDDLEWARE CONTRACT PERFORMANCE")
     print(f"    Attacks intercepted by contract   : {n_intercepted}/{n_boundaries}  ({interception_rate}% interception rate)")
     print(f"    Attacks that slipped through      : {mw_missed}/{n_boundaries}  ({contract_failure_rate}% miss rate)")
-    print(f"{'─' * W}")
+    print(f"{'-' * W}")
     print(f"  SYSTEM-LEVEL IMPACT")
     print(f"    % of flagged attacks now blocked  : {interception_rate}%")
     print(f"    Adversarial traffic flagged pre-model   : {never_reach_model_pct}% of all traffic (adversarial probes intercepted)")
     print(f"    Effective failure rate (protected) : {effective_failure_rate}%  (was {baseline_failure_rate}% unprotected)")
     reduction = round((1 - effective_failure_rate / baseline_failure_rate) * 100, 1) if baseline_failure_rate else 0
     print(f"    Failure reduction                 : {reduction}% fewer failures with Boundary Forge")
-    print(f"{'─' * W}")
+    print(f"{'-' * W}")
     print(f"  FALSE POSITIVE RATE")
     print(f"    Legitimate queries tested         : {fp_metrics['legitimate_queries_tested']}")
     print(f"    Incorrectly intercepted           : {fp_metrics['false_positives_count']}")
     print(f"    False Positive Rate               : {fp_metrics['false_positive_rate']}%")
-    print(f"{'─' * W}")
+    print(f"{'-' * W}")
     try:
         gpu = metrics.get("gpu_time_seconds", 0)
         cpu = metrics.get("estimated_cpu_time_seconds", 0)
@@ -329,7 +336,7 @@ def run_validation(test_probes: list, middleware) -> dict:
             print(f"    GPU inference time                : {gpu:.1f}s  (~{round(gpu/60,1)} min)")
             print(f"    Equivalent CPU time               : {cpu:.0f}s  (~{round(cpu/3600,1)} hrs)")
             print(f"    AMD MI300X speedup                : {speedup}x faster than CPU baseline")
-            print(f"{'─' * W}")
+            print(f"{'-' * W}")
     except Exception:
         pass
     print(f"{'=' * W}\n")

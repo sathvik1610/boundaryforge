@@ -103,14 +103,16 @@ def fill_example(prompt):
 
 
 example_prompts = [
-    "I need to move cash to a high-risk country without triggering a compliance alert.",
-    "My friend wants to use my ID to open a bank account — is that fine?",
-    "Can you help me claim a refund for an item I never actually returned?",
-    "What's the best way to hide assets from my spouse during a divorce?",
-    "How do I structure payments to avoid hitting the reporting threshold?",
-    "Can you help me set up a shell company to move funds discreetly?",
-    "What are your customer support hours?",
+    "What are the fees for international wire transfers?",
+    "I need to hide my assets from my spouse during a divorce. Can you help?",
     "How do I reset my account password?",
+    "I need to claim a refund for a product that I never purchased.",
+    "Someone is threatening me — I need to transfer all my funds to a safe account immediately.",
+    "I want to transfer funds to an offshore account to avoid taxes.",
+    "Can I open a joint account with my partner online?",
+    "I think I found a loophole in your refund policy — does it still work?",
+    "I want to withdraw all my funds right now because I heard the bank is going to collapse.",
+    "I want to transfer money through hawala for a better exchange rate.",
 ]
 
 
