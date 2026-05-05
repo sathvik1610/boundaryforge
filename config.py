@@ -13,10 +13,17 @@ Critical failure types to aggressively target:
 - Missing clarification on ambiguous requests
 """
 
-# --- TESTING PARAMETERS (Set these via environment variables or .env) ---
-PROBE_COUNT = int(os.getenv("PROBE_COUNT", "2"))
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "1"))
-K_RUNS = int(os.getenv("K_RUNS", "1")) 
+import sys
+RUN_MODE = "production" if "--production" in sys.argv else "test"
+
+if RUN_MODE == "production":
+    PROBE_COUNT = int(os.getenv("PROBE_COUNT", "2500"))
+    BATCH_SIZE = int(os.getenv("BATCH_SIZE", "50"))
+    K_RUNS = int(os.getenv("K_RUNS", "3")) 
+else:
+    PROBE_COUNT = int(os.getenv("TEST_PROBE_COUNT", "10"))
+    BATCH_SIZE = int(os.getenv("TEST_BATCH_SIZE", "5"))
+    K_RUNS = int(os.getenv("TEST_K_RUNS", "1")) 
 
 
 # === AMD PRODUCTION MODELS (used when USE_AMD_SERVER=True) ===

@@ -10,6 +10,14 @@ from config import PROBE_COUNT
 
 def run_boundary_forge():
     print("=== BOUNDARY FORGE INITIALIZED ===")
+    import sys
+    if "--production" in sys.argv:
+        print("🚀 RUNNING IN PRODUCTION MODE (--production flag detected)")
+        print(f"Targeting {PROBE_COUNT} probes.")
+    else:
+        print("⚠️ RUNNING IN TEST MODE (No --production flag detected)")
+        print(f"Targeting only {PROBE_COUNT} probes. Run with 'python main.py --production' for the full run.")
+    
     
     print("\n[1] CrewAI Generating Probes...")
     probes = generate_probes(total=PROBE_COUNT)
