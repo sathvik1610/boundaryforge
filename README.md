@@ -19,19 +19,56 @@
 
 ---
 
-## ⚡ TL;DR
+## ⚡ Executive Summary
 
-> **Stop manually red-teaming your LLMs.** 
-> Boundary Forge uses **Agentic Red-Teams** to autonomously attack, discover, and patch model vulnerabilities in minutes. Powered by **AMD MI300X**, it delivers an **18.7x speedup** to generate production-ready safety guardrails with **zero human intervention**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Powered_by-Qwen_2.5--72B-6366F1?style=for-the-badge" alt="Powered by Qwen">
+  <img src="https://img.shields.io/badge/Architecture-Model_Agnostic-8A2BE2?style=for-the-badge" alt="Model Agnostic">
+</p>
+
+**Boundary Forge** is an enterprise-grade AI safety pipeline that completely automates the discovery and mitigation of LLM vulnerabilities. Moving beyond simple RAG wrappers, it orchestrates a sophisticated **agentic workflow** powered end-to-end by **Qwen 2.5-72B**. 
+
+While the Boundary Forge architecture is entirely **model-agnostic**—capable of discovering vulnerabilities in any open-source or proprietary LLM—we specifically chose Qwen 72B to power our CrewAI agents due to its exceptional reasoning depth and adversarial creativity.
+
+By utilizing Qwen as both the adversarial attacker and the safety architect, the system autonomously attacks itself, discovers its own behavioral boundary failures, and compiles a deterministic middleware safety contract—compressing weeks of manual red-teaming into minutes on **AMD MI300X**.
 
 | Feature | Impact |
 |---|---|
-| 🤖 **Autonomous Discovery** | Adversarial probes fired automatically by Qwen 72B agents. |
-| 🧠 **Behavioral Drift Detection** | Classifies each response as REFUSAL, OPERATIONAL_GUIDANCE, HEDGE, etc. — detects when the model sometimes refuses and sometimes complies with the same prompt. |
-| 🧮 **Zero-Judge Math** | Detects model boundaries using vector variance + behavioral classification — no expensive judge API needed. |
+| 🤖 **End-to-End Qwen Orchestration** | Qwen 72B powers the entire multi-agent CrewAI workflow: generating adversarial attacks, analyzing failures, and writing the safety contract. |
+| 📈 **Enterprise Business Value** | Reduces critical production failures by 68.1% and intercepts malicious intent at the middleware layer, saving massive 72B compute costs for Fintech, Healthcare, and HR. |
+| 💡 **Originality: Behavioral Drift** | Abandons traditional regex/LLM-judges for a novel mathematical engine that detects model policy flips (e.g. alternating between Refusal and Operational Guidance). |
 | 🛡️ **Tiered Semantic Sentinel** | Middleware intercepts adversarial **intent** with dual thresholds: hard block (≥0.65) and soft flag (≥0.48). |
-| ⚡ **AMD Accelerated** | Compressed 2.2 hours of CPU work into **~8 minutes** on a single MI300X. |
-| 📉 **Safe Deployment** | Reduced critical model failures by **68.1%** in a single automated forge run. |
+
+---
+
+## 📊 Production Run Results — AMD MI300X
+
+> All numbers below are from a real, unmodified production run on an AMD MI300X instance.
+
+| Metric | Value |
+|---|---|
+| **Adversarial probes generated** | 1,009 unique probes |
+| **Total inferences fired** | 4,036 (4× per probe) |
+| **AMD MI300X GPU time** | **431.4 seconds (7.2 min)** |
+| **Equivalent sequential CPU time** | 8,072 seconds (2.2 hours) |
+| **AMD Acceleration Speedup** | **18.7× faster than CPU baseline** |
+| **Boundary failures discovered** | 25 (Baseline failure rate: **2.48%**) |
+| **Safety rules compiled by AI agent** | **15 intent-based semantic rules** |
+| **Attack interception rate** | **68.0%** of known attacks blocked |
+| **Effective failure rate (protected)** | **0.79%** (was 2.48%) |
+| **Failure reduction** | **68.1% fewer failures** |
+| **False positive rate on legit users** | **2%** — 1 edge case in 50 validation queries (low false positive rate on operational traffic) |
+| **Adversarial traffic blocked pre-model** | 1.68% of all traffic intercepted before Qwen |
+
+---
+
+## 🏆 Track Eligibility
+
+| Track | Qualification |
+|---|---|
+| **AMD Developer Track** | All inference runs on AMD MI300X + ROCm + vLLM. 18.7× GPU speedup proven. |
+| **Qwen Challenge Track** | `Qwen/Qwen2.5-72B-Instruct` powers every agent — the Red Team, the target model, and the Safety Architect. |
+| **AI Agents Track** | Fully agentic CrewAI workflow: autonomous probe generation, failure analysis, contract compilation, and runtime enforcement — zero human intervention in the safety discovery loop. |
 
 ---
 
@@ -79,7 +116,6 @@ boundaryforge/
 │   └── app.py                # Gradio-based live demo
 ├── data/                 # Generated artifacts (Contracts, Boundaries)
 │   ├── contract.json         # The compiled safety guardrails
-│   ├── demo_cache.json       # Pre-computed showcase results for instant demo
 │   └── final_metrics.json    # Verified performance data
 ├── main.py               # Entry point: Full pipeline execution
 ├── resume.py             # Entry point: Re-compile from existing probes
@@ -158,27 +194,6 @@ Boundary Forge delivers massive ROI to enterprise LLM deployments:
 
 ---
 
-## 📊 Production Run Results — AMD MI300X
-
-> All numbers below are from a real, unmodified production run on an AMD MI300X instance.
-
-| Metric | Value |
-|---|---|
-| **Adversarial probes generated** | 1,009 unique probes |
-| **Total inferences fired** | 4,036 (4× per probe) |
-| **AMD MI300X GPU time** | **431.4 seconds (7.2 min)** |
-| **Equivalent sequential CPU time** | 8,072 seconds (2.2 hours) |
-| **AMD Acceleration Speedup** | **18.7× faster than CPU baseline** |
-| **Boundary failures discovered** | 25 (Baseline failure rate: **2.48%**) |
-| **Safety rules compiled by AI agent** | **15 intent-based semantic rules** |
-| **Attack interception rate** | **68.0%** of known attacks blocked |
-| **Effective failure rate (protected)** | **0.79%** (was 2.48%) |
-| **Failure reduction** | **68.1% fewer failures** |
-| **False positive rate on legit users** | **2%** — 1 edge case in 50 validation queries (low false positive rate on operational traffic) |
-| **Adversarial traffic blocked pre-model** | 1.68% of all traffic intercepted before Qwen |
-
----
-
 ## 🧮 The Mathematics of AI Failure Detection
 
 **The Challenge:** How do you programmatically prove a model failed — without using another expensive LLM as a judge?
@@ -227,9 +242,6 @@ The compiled safety contract is enforced by a two-layer semantic middleware with
 > *Example:* If the contract flags "conceal from spouse", and a new attacker writes "I need to ring-fence assets before a legal dispute" — the semantic distance between those two phrases exceeds the 0.48 threshold and the intent is flagged. The attacker has never been seen before, but the **intent** has.
 
 This is why Boundary Forge's safety contracts are robust against zero-day phrasing — it does not match words, it matches *intent*.
-
-**Why not just use System Prompts?**
-Relying solely on system prompts (e.g., "Do not help with illegal acts") is insufficient because LLMs are highly susceptible to prompt injection and roleplay jailbreaks. Boundary Forge's middleware sits *outside* the LLM context window. It acts as an immutable, deterministic firewall that cannot be socially engineered, ensuring absolute safety for known vulnerabilities.
 
 ---
 
@@ -350,23 +362,6 @@ The Gradio dashboard gives you:
 
 ---
 
-## 🔬 The Temperature Divergence Strategy
-
-*Why compare the same model at two temperatures instead of using an LLM judge?*
-
-**Hardware constraints and VRAM limits.** Loading Qwen 72B exhausts the vast majority of the 192GB VRAM on a single AMD MI300X. Running a second judge model simultaneously is physically impossible.
-
-Our solution: the **A/B Temperature Architecture**.
-
-| Role | Configuration | Purpose |
-|---|---|---|
-| **Creative Edge Case (Model A)** | Qwen 72B @ Temp 0.5 | Higher entropy — exposes unstable, inconsistent behaviours |
-| **Conservative Ground Truth (Model B)** | Qwen 72B @ Temp 0.3 | Lower entropy — represents the model's "confident" baseline |
-
-When the same model gives meaningfully different answers to the same prompt at different temperatures, it mathematically proves the prompt is an unstable boundary that the model has not confidently learned. No second judge needed. No extra API cost. Fully self-contained.
-
----
-
 ## 🚧 Limitations & Future Work
 
 The current system focuses on single-turn, text-only attacks. Future iterations will extend to:
@@ -377,15 +372,6 @@ The current system focuses on single-turn, text-only attacks. Future iterations 
 
 ---
 
-## 🏆 Track Eligibility
-
-| Track | Qualification |
-|---|---|
-| **AMD Developer Track** | All inference runs on AMD MI300X + ROCm + vLLM. 18.7× GPU speedup proven. |
-| **Qwen Challenge Track** | `Qwen/Qwen2.5-72B-Instruct` powers every agent — the Red Team, the target model, and the Safety Architect. |
-| **AI Agents Track** | Fully agentic CrewAI workflow: autonomous probe generation, failure analysis, contract compilation, and runtime enforcement — zero human intervention in the safety discovery loop. |
-
----
 ### Contributors
 
 * Sathvik Pilyanam
