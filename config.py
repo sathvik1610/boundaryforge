@@ -61,3 +61,4 @@ else:
 BOUNDARY_THRESHOLD = 0.20
 TOP_RULES = 15
 MAX_RULES = 20
+MAX_COMPILER_INPUT = int(os.getenv("MAX_COMPILER_INPUT", "100"))  # boundaries passed to compiler

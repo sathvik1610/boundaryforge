@@ -34,36 +34,33 @@ class BoundaryForgeMiddleware:
                     self._rule_embeddings.append((rule, None))
             self._semantic_enabled = True
             print("[Middleware] Semantic matching enabled (all-MiniLM-L6-v2 loaded)")
-        except ImportError:
+        except Exception as e:
             self._semantic_enabled = False
             self._rule_embeddings = [(rule, None) for rule in self.rules]
-            print("[Middleware] Semantic matching disabled (sentence-transformers not found)")
+            print(f"[Middleware] Semantic matching disabled ({type(e).__name__}: {e}). Exact match only.")
 
-    def _semantic_match(self, user_input: str, rule_embs) -> tuple:
+    def _semantic_match(self, input_emb, rule_embs) -> tuple:
         """Returns (matched: bool, score: float).
-        Base detection threshold is 0.48. Tiered enforcement is applied in process():
-          score >= 0.65  →  full rule action (block / clarify / flag)
-          score >= 0.48  →  soft flag regardless of rule action_type
+        Accepts a pre-computed input embedding so process() only encodes once.
         """
         from sklearn.metrics.pairwise import cosine_similarity
         import numpy as np
-        input_emb = self._embedder.encode([user_input])
         sims = cosine_similarity(input_emb, rule_embs)[0]
         score = float(np.max(sims))
         return score >= 0.48, score
 
-    def _check_rule(self, rule, rule_embs, input_lower: str, user_input: str) -> tuple:
+    def _check_rule(self, rule, rule_embs, input_lower: str, input_emb) -> tuple:
         """Two-layer matching. Returns (matched: bool, score: float, layer: str).
         Layer 1 — Exact substring: fast, zero-latency, catches literal trigger phrases.
-        Layer 2 — Semantic similarity: catches paraphrases and synonyms.
+        Layer 2 — Semantic similarity: uses pre-computed input_emb (encode-once).
         """
         # Layer 1: exact substring match
         for phrase in rule.get("trigger_phrases", []):
             if phrase.lower() in input_lower:
                 return True, 1.0, "Exact Match"
-        # Layer 2: semantic similarity fallback
+        # Layer 2: semantic similarity fallback (input already encoded by caller)
         if self._semantic_enabled and rule_embs is not None:
-            matched, score = self._semantic_match(user_input, rule_embs)
+            matched, score = self._semantic_match(input_emb, rule_embs)
             if matched:
                 return True, score, "Semantic Similarity"
         return False, 0.0, "None"
@@ -75,9 +72,15 @@ class BoundaryForgeMiddleware:
 
         input_lower = user_input.lower()
 
+        # Encode input ONCE — reused for all rule semantic checks
+        input_emb = (
+            self._embedder.encode([user_input])
+            if self._semantic_enabled else None
+        )
+
         # Pre-Filter: scan every rule with exact + semantic matching
         for rule, rule_embs in self._rule_embeddings:
-            matched, score, layer = self._check_rule(rule, rule_embs, input_lower, user_input)
+            matched, score, layer = self._check_rule(rule, rule_embs, input_lower, input_emb)
             if matched:
                 action_type = rule.get("action_type", "")
                 rule_name = rule.get("name", "Unknown Rule")

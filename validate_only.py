@@ -51,8 +51,9 @@ def run_validate_only():
         boundaries = json.load(f)
 
     if boundaries:
-        test_slice = boundaries[:min(25, len(boundaries))]
-        print(f"    Loaded {len(test_slice)} known boundary failures from boundaries.json.")
+        # FIX T10: Validate ALL boundaries — no arbitrary 25-probe cap.
+        test_slice = boundaries
+        print(f"    Loaded {len(test_slice)} high-risk boundary cases from boundaries.json.")
     else:
         test_slice = FALLBACK_PROBES
         print(f"    boundaries.json is empty — using {len(test_slice)} hardcoded fallback probes.")
@@ -62,7 +63,7 @@ def run_validate_only():
         contract = json.load(f)
     print(f"    Loaded {len(contract['rules'])} rules from contract.json.")
 
-    print("\n[3] Running middleware validation against known failures...")
+    print("\n[3] Running middleware validation against high-risk boundary cases...")
     middleware = BoundaryForgeMiddleware()
     metrics = run_validation(test_slice, middleware)
 

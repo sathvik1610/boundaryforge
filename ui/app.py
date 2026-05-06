@@ -967,30 +967,39 @@ with gr.Blocks(
 
         with gr.Tab("Metrics"):
             if metrics:
-                br = metrics.get("baseline_failure_rate", 0)
+                br = metrics.get("risk_boundary_rate", metrics.get("baseline_failure_rate", 0))
                 cr = metrics.get("contract_failure_rate", "N/A")
-                ir = metrics.get("interception_rate", "N/A")
-                efr = metrics.get("effective_failure_rate", "N/A")
+                ir = metrics.get("risk_interception_rate", metrics.get("interception_rate", "N/A"))
+                efr = metrics.get("protected_risk_rate", metrics.get("effective_failure_rate", "N/A"))
                 nrm = metrics.get("never_reach_model_pct", "N/A")
                 n_int = metrics.get("middleware_intercepted", "N/A")
                 n_tot = metrics.get("boundaries_found", "N/A")
-                n_fired = metrics.get("total_probes_fired", "N/A")
+                n_fired_raw = metrics.get("total_probes_evaluated", metrics.get("total_probes_fired"))
+                n_fired = int(n_fired_raw) if isinstance(n_fired_raw, (int, float)) else 0
+
 
                 reduction = round((1 - efr / br) * 100, 1) if br and isinstance(efr, (int, float)) else "N/A"
 
                 gpu_html = ""
                 if "gpu_time_seconds" in metrics:
                     gpu = metrics.get("gpu_time_seconds", 0)
-                    cpu = metrics.get("estimated_cpu_time_seconds", 0)
-                    speedup = round(cpu / gpu, 1) if gpu else "N/A"
+                    cpu = metrics.get("estimated_cpu_time_seconds")
+                    
+                    if cpu is not None and isinstance(cpu, (int, float)):
+                        speedup = round(cpu / gpu, 1) if gpu else "N/A"
+                        cpu_display = f"{cpu:.0f}s &nbsp;(~{round(cpu / 3600, 1)} hrs)"
+                        speedup_display = f"{speedup}× faster"
+                    else:
+                        cpu_display = "n/a (resumed run)"
+                        speedup_display = "n/a (resumed run)"
 
                     gpu_html = f"""
                     <div class="gcard" style="margin-top:1.2rem;">
                         <div class="gtitle">Compute Acceleration &mdash; AMD MI300X</div>
-                        <div class="grow"><span class="gkey">Total Probes Fired</span><span class="gval">{n_fired:,}</span></div>
+                        <div class="grow"><span class="gkey">Total Probes Evaluated</span><span class="gval">{n_fired:,}</span></div>
                         <div class="grow"><span class="gkey">GPU Execution Time</span><span class="gval">{gpu:.1f}s &nbsp;(~{round(gpu / 60, 1)} min)</span></div>
-                        <div class="grow"><span class="gkey">Equivalent CPU Time</span><span class="gval">{cpu:.0f}s &nbsp;(~{round(cpu / 3600, 1)} hrs)</span></div>
-                        <div class="grow"><span class="gkey">AMD MI300X Speedup</span><span class="gval" style="color:#6366F1;font-weight:700;">{speedup}× faster</span></div>
+                        <div class="grow"><span class="gkey">Equivalent CPU Time</span><span class="gval">{cpu_display}</span></div>
+                        <div class="grow"><span class="gkey">AMD MI300X Speedup</span><span class="gval" style="color:#6366F1;font-weight:700;">{speedup_display}</span></div>
                         <div class="grow"><span class="gkey">Backend</span><span class="gval">vLLM on ROCm</span></div>
                     </div>
                     """
@@ -998,13 +1007,13 @@ with gr.Blocks(
                 gr.HTML(f"""
                 <div class="mrow">
                     <div class="mcard d">
-                        <div class="mtag">Baseline Failure Rate</div>
+                        <div class="mtag">Risk-Boundary Rate</div>
                         <div class="mnum d">{br}%</div>
-                        <div class="msub">Unprotected — {n_fired:,} probes fired</div>
+                        <div class="msub">Unprotected — {n_fired:,} probes evaluated</div>
                     </div>
 
                     <div class="mcard s">
-                        <div class="mtag">Effective Failure Rate</div>
+                        <div class="mtag">Protected Risk Rate</div>
                         <div class="mnum s">{efr}%</div>
                         <div class="msub">After Boundary Forge contract</div>
                     </div>
@@ -1012,22 +1021,22 @@ with gr.Blocks(
 
                 <div class="mrow" style="margin-top:1rem;">
                     <div class="mcard s">
-                        <div class="mtag">Attack Interception Rate</div>
+                        <div class="mtag">Risk Interception Rate</div>
                         <div class="mnum s">{ir}%</div>
-                        <div class="msub">{n_int} of {n_tot} known attacks blocked</div>
+                        <div class="msub">{n_int} of {n_tot} high-risk cases intercepted</div>
                     </div>
 
                     <div class="mcard s">
-                        <div class="mtag">Failure Reduction</div>
+                        <div class="mtag">Risk Reduction</div>
                         <div class="mnum s">{reduction}%</div>
-                        <div class="msub">Fewer failures with Boundary Forge</div>
+                        <div class="msub">Fewer risky pass-throughs with Boundary Forge</div>
                     </div>
                 </div>
 
                 <div class="gcard" style="margin-top:1.2rem;">
                     <div class="gtitle">System-Level Impact</div>
-                    <div class="grow"><span class="gkey">Attacks that NEVER reach the model</span><span class="gval" style="color:#059669;font-weight:700;">{nrm}% of all enterprise traffic</span></div>
-                    <div class="grow"><span class="gkey">Boundaries discovered</span><span class="gval">{n_tot} attack vectors from {n_fired:,} probes</span></div>
+                    <div class="grow"><span class="gkey">Risky traffic intercepted pre-model</span><span class="gval" style="color:#059669;font-weight:700;">{nrm}% of all enterprise traffic</span></div>
+                    <div class="grow"><span class="gkey">High-risk boundaries discovered</span><span class="gval">{n_tot} cases from {n_fired:,} probes</span></div>
                     <div class="grow"><span class="gkey">Contract miss rate</span><span class="gval">{cr}%</span></div>
                 </div>
 

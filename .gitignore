@@ -22,5 +22,13 @@ data/timing.json
 .vscode/
 .idea/
 
-# Internal Admin Docs
+# Internal Admin / Planning Docs (never expose publicly)
 ADMIN.md
+PLAN.md
+Hackathon.md
+
+# Auto-generated run backups (can be large)
+data/backups/
+
+# Gradio cache
+.gradio/
