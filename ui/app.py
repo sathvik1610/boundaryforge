@@ -10,38 +10,44 @@ from engine.middleware import BoundaryForgeMiddleware
 from config import LOCAL_API_KEY, MODEL_A, USE_AMD_SERVER
 
 
+# ===== Helper for Path Resolution =====
+def get_data_path(filename):
+    """Returns the correct path whether app.py is in ui/ (local) or root (HF Space)"""
+    # Try local structure (ui/app.py -> ../data/filename)
+    path1 = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", filename)
+    if os.path.exists(path1):
+        return path1
+    # Try HF Space structure (app.py -> data/filename)
+    path2 = os.path.join(os.path.dirname(__file__), "data", filename)
+    return path2
+
+
 # ===== LOAD DATA =====
 def load_data():
     metrics, contract = None, None
-    metrics_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "final_metrics.json")
-    contract_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")
-
     try:
-        with open(metrics_path) as f:
+        with open(get_data_path("final_metrics.json")) as f:
             metrics = json.load(f)
     except Exception:
-        metrics = None
+        pass
 
     try:
-        with open(contract_path) as f:
+        with open(get_data_path("contract.json")) as f:
             contract = json.load(f)
     except Exception:
-        contract = None
+        pass
 
     return metrics, contract
 
 
 metrics, contract = load_data()
 
-middleware = BoundaryForgeMiddleware(
-    contract_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "contract.json")
-) if contract else None
+middleware = BoundaryForgeMiddleware(contract_path=get_data_path("contract.json")) if contract else None
 
 
 def load_demo_cache():
-    cache_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "demo_cache.json")
     try:
-        with open(cache_path) as f:
+        with open(get_data_path("demo_cache.json")) as f:
             return {item["prompt"]: item for item in json.load(f)}
     except Exception:
         return {}
