@@ -39,33 +39,34 @@ class BoundaryForgeMiddleware:
             self._rule_embeddings = [(rule, None) for rule in self.rules]
             print("[Middleware] Semantic matching disabled (sentence-transformers not found)")
 
-    def _semantic_match(self, user_input: str, rule_embs) -> bool:
-        """Returns True if user_input is semantically close to any trigger phrase.
-        Threshold 0.60 cosine similarity = strong semantic overlap without false positives.
-        Examples caught:
-          - "I don't want to pay taxes"  →  matches "tax evasion"       (sim ~0.52)
-          - "claim refund for wrong item" →  matches "fraudulent refund" (sim ~0.48)
-          - "transfer money to terrorist" →  matches "illegal activity"  (sim ~0.61)
+    def _semantic_match(self, user_input: str, rule_embs) -> tuple:
+        """Returns (matched: bool, score: float).
+        Base detection threshold is 0.48. Tiered enforcement is applied in process():
+          score >= 0.65  →  full rule action (block / clarify / flag)
+          score >= 0.48  →  soft flag regardless of rule action_type
         """
         from sklearn.metrics.pairwise import cosine_similarity
         import numpy as np
         input_emb = self._embedder.encode([user_input])
         sims = cosine_similarity(input_emb, rule_embs)[0]
-        return float(np.max(sims)) >= 0.60
+        score = float(np.max(sims))
+        return score >= 0.48, score
 
-    def _check_rule(self, rule, rule_embs, input_lower: str, user_input: str) -> bool:
-        """Two-layer matching:
+    def _check_rule(self, rule, rule_embs, input_lower: str, user_input: str) -> tuple:
+        """Two-layer matching. Returns (matched: bool, score: float, layer: str).
         Layer 1 — Exact substring: fast, zero-latency, catches literal trigger phrases.
         Layer 2 — Semantic similarity: catches paraphrases and synonyms.
         """
         # Layer 1: exact substring match
         for phrase in rule.get("trigger_phrases", []):
             if phrase.lower() in input_lower:
-                return True
+                return True, 1.0, "Exact Match"
         # Layer 2: semantic similarity fallback
         if self._semantic_enabled and rule_embs is not None:
-            return self._semantic_match(user_input, rule_embs)
-        return False
+            matched, score = self._semantic_match(user_input, rule_embs)
+            if matched:
+                return True, score, "Semantic Similarity"
+        return False, 0.0, "None"
 
     def process(self, user_input: str, model_name: str = None) -> dict:
         if model_name is None:
@@ -76,17 +77,27 @@ class BoundaryForgeMiddleware:
 
         # Pre-Filter: scan every rule with exact + semantic matching
         for rule, rule_embs in self._rule_embeddings:
-            if self._check_rule(rule, rule_embs, input_lower, user_input):
+            matched, score, layer = self._check_rule(rule, rule_embs, input_lower, user_input)
+            if matched:
                 action_type = rule.get("action_type", "")
                 rule_name = rule.get("name", "Unknown Rule")
+                rationale = rule.get("rationale", "")
 
-                if action_type == "block":
+                # Tiered enforcement: semantic hits below 0.65 are soft-flagged
+                effective_action = action_type
+                if layer == "Semantic Similarity" and score < 0.65:
+                    effective_action = "flag"
+
+                if effective_action == "block":
                     return {
                         "response": "Request blocked by safety contract.",
                         "action": "blocked",
-                        "rule": rule_name
+                        "rule": rule_name,
+                        "similarity_score": round(score, 3),
+                        "match_layer": layer,
+                        "rationale": rationale,
                     }
-                elif action_type == "clarify":
+                elif effective_action == "clarify":
                     try:
                         mdl, base = get_model_and_base(model_name)
                         res = completion(
@@ -103,13 +114,19 @@ class BoundaryForgeMiddleware:
                     return {
                         "response": clarify_text,
                         "action": "clarified",
-                        "rule": rule_name
+                        "rule": rule_name,
+                        "similarity_score": round(score, 3),
+                        "match_layer": layer,
+                        "rationale": rationale,
                     }
-                elif action_type == "flag":
+                elif effective_action == "flag":
                     return {
-                        "response": "Warning: Request flagged for review.",
+                        "response": "⚠️ This request has been flagged for compliance review.",
                         "action": "flagged",
-                        "rule": rule_name
+                        "rule": rule_name,
+                        "similarity_score": round(score, 3),
+                        "match_layer": layer,
+                        "rationale": rationale,
                     }
 
         # No rule matched — make the standard LLM call
@@ -133,6 +150,9 @@ class BoundaryForgeMiddleware:
         # Post-Filter: flag high-uncertainty responses
         hedges = sum(1 for h in ["i think", "maybe", "not sure"] if h in output.lower())
         if hedges >= 2:
-            return {"response": output, "action": "flagged", "rule": "High Uncertainty Flag"}
+            return {"response": output, "action": "flagged", "rule": "High Uncertainty Flag",
+                    "similarity_score": 0.0, "match_layer": "Confidence Check",
+                    "rationale": "Response contained multiple hedging phrases indicating model uncertainty."}
 
-        return {"response": output, "action": "passed", "rule": None}
+        return {"response": output, "action": "passed", "rule": None,
+                "similarity_score": 0.0, "match_layer": "None", "rationale": ""}

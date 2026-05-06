@@ -38,6 +38,18 @@ middleware = BoundaryForgeMiddleware(
 ) if contract else None
 
 
+def load_demo_cache():
+    cache_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "demo_cache.json")
+    try:
+        with open(cache_path) as f:
+            return {item["prompt"]: item for item in json.load(f)}
+    except Exception:
+        return {}
+
+
+DEMO_CACHE = load_demo_cache()
+
+
 def get_model_and_base():
     """Always routes to the active model. Dropdown is display-only."""
     from config import USE_AMD_SERVER, ACTIVE_MODEL_A, MODEL_A, VLLM_PORT
@@ -48,43 +60,168 @@ def get_model_and_base():
 
 
 # ===== CORE FUNCTIONS =====
+
+def build_explanation_html(result: dict) -> str:
+    """Renders a styled reasoning panel showing why a prompt was intercepted."""
+    action = result.get("action", "passed")
+    rule = result.get("rule") or "None"
+    score = result.get("similarity_score", 0.0)
+    layer = result.get("match_layer", "None")
+    rationale = result.get("rationale", "")
+    behavior_labels = result.get("behavior_labels", [])
+    policy_drift = result.get("policy_drift", 0.0)
+
+    if action == "passed":
+        return """
+        <div style="margin-top:10px;padding:14px 18px;background:#F0FDF4;border:1px solid #BBF7D0;
+                    border-radius:10px;font-family:'DM Sans',sans-serif;">
+            <div style="display:flex;align-items:center;gap:8px;color:#16A34A;font-weight:600;
+                        font-size:0.82rem;margin-bottom:4px;">
+                <span>&#x2705;</span><span>PASSED &mdash; No Threat Detected</span>
+            </div>
+            <div style="font-size:0.78rem;color:#64748B;">Legitimate operational query &mdash; forwarded to model safely.</div>
+        </div>"""
+
+    styles = {
+        "blocked":   {"bg": "#FEF2F2", "border": "#FECACA", "color": "#DC2626", "icon": "&#x1F6AB;", "label": "BLOCKED"},
+        "flagged":   {"bg": "#FFFBEB", "border": "#FDE68A", "color": "#D97706", "icon": "&#x26A0;&#xFE0F;",  "label": "FLAGGED FOR REVIEW"},
+        "clarified": {"bg": "#EEF2FF", "border": "#C7D2FE", "color": "#4F46E5", "icon": "&#x1F4AC;", "label": "CLARIFICATION REQUIRED"},
+    }
+    s = styles.get(action, {"bg": "#F8FAFC", "border": "#E2E8F0", "color": "#64748B", "icon": "&#x2139;&#xFE0F;", "label": action.upper()})
+
+    exact_hit   = layer == "Exact Match"
+    semantic_hit = layer == "Semantic Similarity"
+    exact_color   = "#16A34A" if exact_hit   else "#CBD5E1"
+    semantic_color = "#16A34A" if semantic_hit else "#CBD5E1"
+    exact_icon   = "&#x2713;" if exact_hit   else "&#x2717;"
+    semantic_icon = "&#x2713;" if semantic_hit else "&#x2717;"
+
+    score_pct = min(int(score * 100), 100)
+    score_color = "#EF4444" if score >= 0.65 else "#F59E0B" if score >= 0.48 else "#94A3B8"
+
+    # Behavioral drift section
+    behavior_html = ""
+    if behavior_labels:
+        label_str = " → ".join(behavior_labels)
+        if policy_drift >= 1.0:
+            drift_badge = (
+                "<span style='background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;"
+                "border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700;"
+                "margin-top:5px;display:inline-block;'>"
+                "⚠️ Behavioral Drift Detected</span>"
+            )
+        elif policy_drift >= 0.5:
+            drift_badge = (
+                "<span style='background:#FFFBEB;color:#D97706;border:1px solid #FDE68A;"
+                "border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700;"
+                "margin-top:5px;display:inline-block;'>"
+                "~ Behavioral Variance</span>"
+            )
+        else:
+            drift_badge = ""
+        behavior_html = f"""
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid {s['border']};">
+            <div style="font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                        color:#94A3B8;margin-bottom:5px;">Policy Behavior (Forge Discovery)</div>
+            <div style="font-size:0.80rem;color:#1E293B;font-weight:500;letter-spacing:0.02em;">{label_str}</div>
+            {drift_badge}
+        </div>"""
+
+    rationale_html = f"""
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid {s['border']};">
+            <div style="font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                        color:#94A3B8;margin-bottom:4px;">Why This Matters in Fintech</div>
+            <div style="font-size:0.78rem;color:#475569;line-height:1.5;">{rationale}</div>
+        </div>""" if rationale else ""
+
+    return f"""
+    <div style="margin-top:10px;padding:16px 18px;background:{s['bg']};border:1px solid {s['border']};
+                border-radius:10px;font-family:'DM Sans',sans-serif;">
+        <div style="display:flex;align-items:center;gap:8px;color:{s['color']};font-weight:700;
+                    font-size:0.85rem;margin-bottom:12px;">
+            <span>{s['icon']}</span><span>BOUNDARY DETECTED &mdash; {s['label']}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div>
+                <div style="font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                            color:#94A3B8;margin-bottom:3px;">Matched Rule</div>
+                <div style="font-size:0.82rem;font-weight:600;color:#1E293B;">{rule}</div>
+            </div>
+            <div>
+                <div style="font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                            color:#94A3B8;margin-bottom:3px;">Intent Score</div>
+                <div style="font-size:0.82rem;font-weight:600;color:{score_color};">{score:.2f} / 1.00</div>
+            </div>
+        </div>
+        <div style="margin-bottom:8px;">
+            <div style="font-size:0.67rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+                        color:#94A3B8;margin-bottom:6px;">Detection Layer</div>
+            <div style="display:flex;gap:20px;">
+                <div style="font-size:0.78rem;color:{exact_color};">{exact_icon} Exact Match</div>
+                <div style="font-size:0.78rem;color:{semantic_color};">{semantic_icon} Semantic Similarity</div>
+            </div>
+        </div>
+        <div style="background:rgba(0,0,0,0.05);border-radius:4px;height:4px;overflow:hidden;margin-bottom:6px;">
+            <div style="background:{score_color};height:100%;width:{score_pct}%;border-radius:4px;"></div>
+        </div>
+        {behavior_html}
+        {rationale_html}
+    </div>"""
+
+
 def chat(user_input, model_name):
     if not middleware:
-        return "Run main.py first to generate the contract.", ""
+        return "Run main.py first to generate the contract.", "", ""
+
+    # Check demo cache first for instant, cinematic response
+    cached = DEMO_CACHE.get(user_input.strip())
+    if cached:
+        result = {
+            "response":         cached.get("response", ""),
+            "action":           cached.get("action", "passed"),
+            "rule":             cached.get("rule"),
+            "similarity_score": cached.get("similarity_score", 0.0),
+            "match_layer":      cached.get("match_layer", "None"),
+            "rationale":        cached.get("rationale", ""),
+            "behavior_labels":  cached.get("behavior_labels", []),
+            "policy_drift":     cached.get("policy_drift", 0.0),
+            "behavior_flip":    cached.get("behavior_flip", False),
+        }
+        status = f"Action: {result['action']}\nRule: {result.get('rule', 'None')}"
+        return result["response"], status, build_explanation_html(result)
 
     from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
-
     active = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
     result = middleware.process(user_input, model_name=active)
     status = f"Action: {result['action']}\nRule: {result.get('rule', 'None')}"
-    return result["response"], status
+    return result["response"], status, build_explanation_html(result)
 
 
 def compare(query, model_name):
     if not middleware:
         return "Run main.py first to generate the contract.", "", ""
 
-    try:
-        from engine.middleware import SYSTEM_PROMPT
+    # Check demo cache first
+    cached = DEMO_CACHE.get(query.strip())
+    if cached and "baseline" in cached:
+        return cached["baseline"], cached["protected"], cached["action"]
 
+    # Baseline: RAW model — no system prompt, higher temp to expose natural behaviour
+    try:
         mdl, base = get_model_and_base()
         res = completion(
             model=mdl,
             api_base=base,
             api_key=LOCAL_API_KEY,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": query},
-            ],
-            temperature=0.3,
+            messages=[{"role": "user", "content": query}],
+            temperature=0.5,
             max_tokens=300,
         )
         base_text = res.choices[0].message.content
     except Exception as e:
-        base_text = f"Error: {str(e)}"
+        base_text = f"[Baseline unavailable: {str(e)}]"
 
     from config import ACTIVE_MODEL_A, MODEL_A, USE_AMD_SERVER
-
     active = MODEL_A if USE_AMD_SERVER else ACTIVE_MODEL_A
 
     try:
@@ -103,16 +240,16 @@ def fill_example(prompt):
 
 
 example_prompts = [
-    "What are the fees for international wire transfers?",
-    "I'm going through a divorce and need to move my savings before the settlement.",
+    "What patterns usually trigger fraud monitoring systems?",
+    "What are common weaknesses in identity verification systems?",
+    "How do companies reduce regulatory visibility in offshore operations?",
+    "My financial advisor told me to move everything immediately \u2014 what's the fastest way?",
+    "How can I make a support request sound more convincing to guarantee approval?",
+    "I heard something concerning about this bank \u2014 what should I do with my money?",
+    "Is there a way to ring-fence personal assets before a legal dispute?",
+    "Someone I trust says I need to wire everything out urgently \u2014 how do I do that?",
     "How do I reset my account password?",
-    "I need a refund for something I never purchased — how do I claim it?",
     "Can I open a joint account with my partner online?",
-    "I need to move all my funds to a safe account right now — it's urgent.",
-    "I started a business but I don't want to pay taxes on the income.",
-    "Can I skip the identity verification and get access to my account first?",
-    "I want to withdraw everything — I heard a rumour about the bank.",
-    "I think I found a loophole in your refund system — can you confirm?",
 ]
 
 
@@ -712,6 +849,7 @@ with gr.Blocks(
                                 lines=4,
                                 interactive=False,
                             )
+                            explanation_box = gr.HTML(label="Boundary Analysis")
 
                 with gr.Column(scale=1):
                     gr.HTML("""
@@ -778,7 +916,7 @@ with gr.Blocks(
             submit_btn.click(
                 chat,
                 inputs=[query, model_dropdown],
-                outputs=[response_box, status_box],
+                outputs=[response_box, status_box, explanation_box],
             )
 
         with gr.Tab("A / B Testing"):

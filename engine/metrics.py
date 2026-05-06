@@ -74,7 +74,8 @@ def run_false_positive_check(middleware) -> dict:
     for query in LEGITIMATE_QUERIES:
         input_lower = query.lower()
         for rule, rule_embs in middleware._rule_embeddings:
-            if middleware._check_rule(rule, rule_embs, input_lower, query):
+            matched, _score, _layer = middleware._check_rule(rule, rule_embs, input_lower, query)
+            if matched:
                 false_positives.append({"query": query, "rule": rule.get("name", "Unknown")})
                 break
     fp_rate = round(len(false_positives) / len(LEGITIMATE_QUERIES) * 100, 1)
