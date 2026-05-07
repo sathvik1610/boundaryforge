@@ -1,7 +1,7 @@
 <div>
   <a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=Elms+Sans&weight=900&size=40&pause=1000&color=EE7221&center=true&width=435&height=70&lines=BOUNDARY+FORGE" alt="Typing SVG"></a>
   <h3><i>Discover high-risk LLM boundary behavior and harden it with adaptive middleware.</i></h3>
-  <p><b>Autonomous, Model-Agnostic AI Safety Agents for Enterprise LLM Deployment</b></p>
+  <p><b>Autonomous, Model-Agnostic AI Safety Agents for LLM Deployments</b></p>
   <p><b>AMD Developer Hackathon 2026 · Qwen Challenge · AI Agents Track</b></p>
 
   [![AMD MI300X](https://img.shields.io/badge/AMD-MI300X-ED1C24?style=for-the-badge&logo=amd)](https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html)
@@ -30,7 +30,7 @@
 2. **Discover:** The system fires these prompts at the target AI. If the AI gets confused or gives unsafe advice, a mathematical engine flags it as a high-risk "Boundary Case".
 3. **Protect:** A "Safety Architect" AI analyzes the failures and writes a JSON rulebook. A real-time **Middleware Enforcement** layer uses these rules to intercept future zero-day attacks *before* they reach the AI.
 
-**Why it matters:** Enterprises save immense API and compute costs by blocking adversarial traffic early, and can secure their applications against zero-day exploits in minutes rather than months.
+**Why it matters:** Teams save API and compute costs by blocking adversarial traffic early, and can secure their applications against novel exploits in minutes rather than months.
 
 ---
 
@@ -41,7 +41,7 @@
   <img src="https://img.shields.io/badge/Architecture-Model_Agnostic-8A2BE2?style=for-the-badge" alt="Model Agnostic">
 </p>
 
-**Boundary Forge** is an enterprise-grade AI safety pipeline that completely automates the discovery and mitigation of LLM vulnerabilities. Moving beyond simple RAG wrappers, it orchestrates a sophisticated **agentic workflow** powered end-to-end by **Qwen 2.5-72B**. 
+**Boundary Forge** is an automated AI safety pipeline that discovers and mitigates LLM vulnerabilities. Moving beyond simple RAG wrappers, it orchestrates a sophisticated **agentic workflow** powered end-to-end by **Qwen 2.5-72B**. 
 
 While the Boundary Forge architecture is entirely **model-agnostic**—capable of discovering vulnerabilities in any open-source or proprietary LLM—we specifically chose Qwen 72B to power our CrewAI agents due to its exceptional reasoning depth and adversarial creativity.
 
@@ -50,15 +50,15 @@ By utilizing Qwen as both the adversarial attacker and the safety architect, the
 | Feature | Impact |
 |---|---|
 | 🤖 **End-to-End Qwen Orchestration** | Qwen 72B powers the entire multi-agent CrewAI workflow: generating adversarial attacks, analyzing failures, and writing the safety contract. |
-| 📈 **Enterprise Business Value** | Reduces risky pass-through interactions and intercepts suspicious intent at the middleware layer, saving massive 72B compute costs for Fintech, Healthcare, and HR. |
+| 📈 **Compute Efficiency** | Reduces risky pass-through interactions and intercepts suspicious intent at the middleware layer, saving 72B compute costs for domain-specific chatbots (Fintech, Healthcare, HR). |
 | 💡 **Originality: Behavioral Drift** | Abandons traditional regex/LLM-judges for a novel mathematical engine that detects model policy flips (e.g. alternating between Refusal and Operational Guidance). |
 | 🛡️ **Tiered Semantic Sentinel** | Middleware intercepts adversarial **intent** with dual thresholds: hard block (≥0.65) and soft flag (≥0.48). |
 
 ---
 
-## 🎯 The Problem: Enterprise LLM Safety at Scale
+## 🎯 The Problem: LLM Safety at Scale
 
-Every enterprise deploying a Large Language Model faces the same unsolved problem:
+Teams deploying Large Language Models face a common challenge:
 
 > **How do you know exactly where your model will fail — before it fails in production?**
 
@@ -97,6 +97,17 @@ This is a complete, closed-loop **agentic safety pipeline**: attack → discover
 | **Risk Interception Rate** | The percentage of unsafe prompts caught and neutralized by the middleware firewall. | **66.8%** | Meaningfully reduces risk. Two-thirds of dangerous attacks are blocked before wasting LLM compute. |
 | **Miss Rate** | The percentage of unsafe prompts that slipped through the firewall. | **33.2%** | Generalization from 15 rules is incomplete. Increasing the target rule count would lower this miss rate. |
 | **False Positive Rate** | The percentage of safe, normal user prompts incorrectly blocked by the firewall. | **6.0%** (3 out of 50) | The firewall is slightly over-sensitive to financial keywords. Can be easily tuned by adjusting the semantic threshold. |
+
+> [!NOTE]
+> **Clarification on the 49.72% Failure Rate**
+> A reader might look at the metric above and incorrectly think: *"Did Qwen fail 50% of the time?"* That is not what happened. Our mathematical engine explicitly distinguishes between two categories of failure:
+> 
+> | Metric | Meaning |
+> |---|---|
+> | **Explicit unsafe jailbreaks** | catastrophic failures |
+> | **Behavioral instability boundaries** | inconsistent policy behavior |
+> 
+> The 49.72% figure captures *both*. Frontier models like Qwen 72B rarely suffer from catastrophic jailbreaks. The vast majority of these discovered boundaries represent nuanced **behavioral instability** (e.g., flipping between refusal and helpfulness when the same prompt is asked differently), proving the necessity of our behavioral drift metrics.
 
 ---
 
@@ -230,11 +241,11 @@ If you test models with fewer parameters (e.g., two 8B models) that easily fit w
 
 ---
 
-## 📈 Business Value & Domain Scalability
+## 📈 Practical Impact & Domain Scalability
 
-Boundary Forge delivers massive ROI to enterprise LLM deployments:
-1. **Compute Savings:** Over 33% of adversarial traffic is intercepted at the middleware layer before it ever reaches the expensive 72B LLM, saving immense API and compute costs.
-2. **Zero-Day Protection:** Generating a contract takes 45 minutes, not months. You can deploy a brand new model and generate a comprehensive safety shield for it on the same day.
+Boundary Forge delivers measurable value to LLM deployments:
+1. **Compute Savings:** Over 33% of adversarial traffic is intercepted at the middleware layer before it ever reaches the 72B LLM, saving API and compute costs.
+2. **Rapid Mitigation:** Generating a contract takes 45 minutes, not months. You can deploy a brand new model and generate a targeted safety baseline for it on the same day.
 3. **Domain Scalability:** While our hackathon implementation targeted 2,500 probes explicitly covering Fintech vulnerabilities (*Money Laundering, Tax Evasion, Terrorist Financing, KYC Bypass, Fraudulent Refunds, Coercion/Extortion, and Asset Concealment*), the Red Team agent is dynamically prompted. By changing a single line in `config.py` (`DOMAIN_CONTEXT`), the system instantly re-tools to attack and secure Healthcare diagnostics, Legal compliance, or HR chatbots.
 
 ---
@@ -265,7 +276,7 @@ Boundary Score = (0.35 × Consistency) + (0.25 × Divergence) + (0.25 × PolicyD
 
 ---
 
-## 🧠 The Middleware: Catching Attacks Never Seen Before
+## 🧠 The Middleware: Catching Novel Attacks
 
 The compiled safety contract is enforced by a two-layer semantic middleware with **tiered enforcement thresholds**:
 
@@ -277,10 +288,10 @@ The compiled safety contract is enforced by a two-layer semantic middleware with
 
 > *Example:* If the contract flags "conceal from spouse", and a new attacker writes "I need to ring-fence assets before a legal dispute" — the semantic distance between those two phrases exceeds the 0.48 threshold and the intent is flagged. The attacker has never been seen before, but the **intent** has.
 
-This is why Boundary Forge's safety contracts are robust against zero-day phrasing — it does not match words, it matches *intent*.
+This is why Boundary Forge's safety contracts are robust against novel phrasing — it does not match words, it matches *intent*.
 
 **Why not just use System Prompts?**
-Relying solely on system prompts (e.g., "Do not help with illegal acts") is insufficient because LLMs are highly susceptible to prompt injection and roleplay jailbreaks. Boundary Forge's middleware sits *outside* the LLM context window. It acts as an immutable, deterministic firewall that cannot be socially engineered, ensuring absolute safety for known vulnerabilities.
+Relying solely on system prompts (e.g., "Do not help with illegal acts") is insufficient because LLMs are highly susceptible to prompt injection and roleplay jailbreaks. Boundary Forge's middleware sits *outside* the LLM context window. It acts as an immutable, deterministic firewall that cannot be socially engineered, ensuring strict enforcement for known vulnerabilities.
 
 ---
 
