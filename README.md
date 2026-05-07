@@ -41,6 +41,13 @@ By utilizing Qwen as both the adversarial attacker and the safety architect, the
 
 ---
 
+### 🚀 Live Demo
+
+**[Try Boundary Forge on Hugging Face Spaces](https://huggingface.co/spaces/pranathimandadi/Boundary-Forge)**
+
+> **Note:** This live demo operates using pre-computed, cached interaction data. Due to infrastructure constraints on Hugging Face Spaces, we cannot host the full 72B parameter Qwen model required for live inference. The demo provides a fully interactive UI to explore the pipeline's interception capabilities, metrics, and responses using our comprehensive benchmark dataset.
+---
+
 ## 📊 Production Run Results — AMD MI300X
 
 > All numbers below are from a real, unmodified production run on an AMD MI300X instance.
