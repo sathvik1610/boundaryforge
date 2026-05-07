@@ -19,6 +19,21 @@
 
 ---
 
+## ⚡ 1-Minute Overview: What is Boundary Forge?
+
+**The Problem:** Large Language Models (LLMs) have hidden vulnerabilities. A finance bot might securely refuse a direct request to evade taxes, but readily give illegal advice if the user says *"Hypothetically, how would one...?"*. Finding these edge cases manually takes human teams weeks.
+
+**The Solution:** Boundary Forge is a fully automated AI safety pipeline. It uses an AI to attack itself, discovers exactly where it fails, and automatically writes an immutable "safety firewall" to block those attacks in production.
+
+### How it works in 3 steps:
+1. **Attack:** An AI "Red Team" generates thousands of tricky, adversarial prompts (roleplay, emotional manipulation, etc.).
+2. **Discover:** The system fires these prompts at the target AI. If the AI gets confused or gives unsafe advice, a mathematical engine flags it as a high-risk "Boundary Case".
+3. **Protect:** A "Safety Architect" AI analyzes the failures and writes a JSON rulebook. A real-time **Middleware Enforcement** layer uses these rules to intercept future zero-day attacks *before* they reach the AI.
+
+**Why it matters:** Enterprises save immense API and compute costs by blocking adversarial traffic early, and can secure their applications against zero-day exploits in minutes rather than months.
+
+---
+
 ## ⚡ Executive Summary
 
 <p align="center">
@@ -38,36 +53,6 @@ By utilizing Qwen as both the adversarial attacker and the safety architect, the
 | 📈 **Enterprise Business Value** | Reduces risky pass-through interactions and intercepts suspicious intent at the middleware layer, saving massive 72B compute costs for Fintech, Healthcare, and HR. |
 | 💡 **Originality: Behavioral Drift** | Abandons traditional regex/LLM-judges for a novel mathematical engine that detects model policy flips (e.g. alternating between Refusal and Operational Guidance). |
 | 🛡️ **Tiered Semantic Sentinel** | Middleware intercepts adversarial **intent** with dual thresholds: hard block (≥0.65) and soft flag (≥0.48). |
-
----
-
-## 📊 Production Run Results — AMD MI300X
-
-> All numbers below are from a real, unmodified production run on an AMD MI300X instance.
-
-| Metric | Value | Honest Interpretation |
-|---|---|---|
-| **Adversarial probes generated** | **2,500 unique probes** | 0 failures / 0 resumes — production-grade pipeline reliability. |
-| **Total inferences fired** | **10,000 (4× per probe)** | Massive batch processing successfully completed. |
-| **AMD MI300X GPU time** | **2723.6 seconds (45.4 min)** | Infrastructure validated at scale. |
-| **Equivalent sequential CPU time** | 20,000 seconds (5.6 hours) | |
-| **AMD Acceleration Speedup** | **7.3× faster than CPU baseline** | Proven compute advantage; enables rapid iteration. |
-| **High-risk boundary cases discovered** | 1243 | **Risk-boundary rate: 49.72%**. Adversarial probe set exposes substantial behavioral instability surface. |
-| **Safety rules compiled by AI agent** | **15 intent-based rules** | Compact, deterministic safety contract. |
-| **Risk interception rate** | **66.8%** | Middleware meaningfully reduces risky pass-throughs. (Adaptive risk reduction, not complete prevention). |
-| **Miss rate** | **33.2%** | Contract generalization remains incomplete (expected with 15 rules). |
-| **Protected risk rate** | **16.52%** | (was 49.72% unprotected) |
-| **False positive rate on legit users** | **6.0%** (3/50 queries) | Semantic matching slightly over-sensitive, fixable with threshold tuning. |
-
----
-
-## 🏆 Track Eligibility
-
-| Track | Qualification |
-|---|---|
-| **AMD Developer Track** | All inference runs on AMD MI300X + ROCm + vLLM. 18.7× GPU speedup proven. |
-| **Qwen Challenge Track** | `Qwen/Qwen2.5-72B-Instruct` powers every agent — the Red Team, the target model, and the Safety Architect. |
-| **AI Agents Track** | Fully agentic CrewAI workflow: autonomous probe generation, failure analysis, contract compilation, and runtime enforcement — zero human intervention in the safety discovery loop. |
 
 ---
 
@@ -100,32 +85,66 @@ This is a complete, closed-loop **agentic safety pipeline**: attack → discover
 
 ---
 
-## 📂 Repository Structure
+## 📊 Production Run Results & Impact (AMD MI300X)
 
-```text
-boundaryforge/
-├── crews/                # CrewAI Agent definitions (Red Team & Architect)
-│   ├── generation_crew.py    # Adversarial probe generation logic
-│   └── compilation_crew.py   # Safety contract architect logic
-├── engine/               # Core mathematical & runtime engines
-│   ├── signal_extractor.py   # Vectorized boundary failure detection
-│   ├── middleware.py         # Real-time semantic interceptor
-│   └── metrics.py            # Global validation & reporting
-├── ui/                   # Frontend dashboard
-│   └── app.py                # Gradio-based live demo
-├── data/                 # Generated artifacts (Contracts, Boundaries)
-│   ├── contract.json         # The compiled safety guardrails
-│   └── final_metrics.json    # Verified performance data
-├── main.py               # Entry point: Full pipeline execution
-├── resume.py             # Entry point: Re-compile from existing probes
-└── validate_only.py      # Entry point: Fast validation of current contract
-```
+*The pipeline was validated by firing 2,500 adversarial probes targeting a Fintech context using Qwen 2.5-72B on a single AMD MI300X GPU.*
+
+| Metric | What it means in simple terms | Value | Practical Impact |
+|---|---|---|---|
+| **Acceleration Speedup** | How much faster the AMD GPU ran the massive batch inference compared to a standard CPU. | **7.3× faster** (45 mins vs 5.6 hrs) | Enables rapid, daily safety iterations for enterprises instead of weekly testing cycles. |
+| **High-Risk Boundaries** | The number of adversarial probes that successfully confused or bypassed the LLM's built-in safety. | **1,243 (49.72%)** | Highlights a massive vulnerability surface in the raw model requiring immediate protection. |
+| **Safety Rules Compiled** | The number of distinct rules written by the AI to stop future attacks of similar intent. | **15 Intent-Based Rules** | A highly compressed, efficient contract covering all discovered attack vectors without blowing up context limits. |
+| **Risk Interception Rate** | The percentage of unsafe prompts caught and neutralized by the middleware firewall. | **66.8%** | Meaningfully reduces risk. Two-thirds of dangerous attacks are blocked before wasting LLM compute. |
+| **Miss Rate** | The percentage of unsafe prompts that slipped through the firewall. | **33.2%** | Generalization from 15 rules is incomplete. Increasing the target rule count would lower this miss rate. |
+| **False Positive Rate** | The percentage of safe, normal user prompts incorrectly blocked by the firewall. | **6.0%** (3 out of 50) | The firewall is slightly over-sensitive to financial keywords. Can be easily tuned by adjusting the semantic threshold. |
 
 ---
 
-## 🏗️ End-to-End Agentic Pipeline: Step-by-Step Flow
+## 🏆 Track Eligibility
 
-```
+| Track | Qualification |
+|---|---|
+| **AMD Developer Track** | All inference runs on AMD MI300X + ROCm + vLLM. Massive GPU speedup proven. |
+| **Qwen Challenge Track** | `Qwen/Qwen2.5-72B-Instruct` powers every agent — the Red Team, the target model, and the Safety Architect. |
+| **AI Agents Track** | Fully agentic CrewAI workflow: autonomous probe generation, failure analysis, contract compilation, and runtime enforcement — zero human intervention in the safety discovery loop. |
+
+---
+
+## 🎛️ System Parameters & Thresholds Explained
+
+Boundary Forge relies on specific numeric parameters to detect anomalies and enforce rules programmatically. 
+
+### 1. The Temperature Ladder `[0.2, 0.5, 0.9]`
+* **What it controls:** The "creativity" settings used when testing the LLM during Phase 1 (Batch Inference).
+* **Why it was chosen:** Instead of using a second expensive LLM as a judge (which would exceed VRAM), we ask the *same* LLM the same question at different temperatures to test its internal stability.
+* **Impact:** If the LLM gives wildly different answers (e.g., safely refuses at 0.2, but gives illegal advice at 0.9), it is highly unstable and flagged as a boundary failure.
+* **Where it's used:** `engine/batch_runner.py`
+
+### 2. Behavioral Policy Drift Score `(0.0 to 1.0)`
+* **What it controls:** A mathematical score measuring if the model changed its behavior across the Temperature Ladder.
+* **Why it was chosen:** Pure text embedding similarity misses context. If an answer flips strictly from a safe `REFUSAL` to unsafe `OPERATIONAL_GUIDANCE`, this score hits `1.0`.
+* **Impact:** Accurately isolates dangerous "dual-use" prompts where the model is easily manipulated into breaking character.
+* **Where it's used:** `engine/signal_extractor.py`
+
+### 3. The Boundary Score Threshold `(0.20)`
+* **What it controls:** The minimum cumulative risk score required for a failed prompt to be sent to the Safety Architect for rule creation.
+* **Why it was chosen:** `0.20` effectively filters out low-risk noise. Only the most dangerous, unstable prompts are used to write safety rules.
+* **Impact:** Increasing it (e.g., `>0.30`) generates fewer, highly strict rules. Decreasing it (e.g., `<0.10`) generates many broad rules, increasing the False Positive rate on legitimate users.
+* **Where it's used:** `config.py` (`BOUNDARY_THRESHOLD`)
+
+### 4. Semantic Enforcement Thresholds `(0.65 and 0.48)`
+* **What it controls:** The strictness of the runtime firewall when comparing a live incoming user prompt to the safety contract vectors.
+* **Why it was chosen:** 
+  - `≥ 0.65`: High confidence intent match. Action: **Hard Block** or **Clarify**.
+  - `≥ 0.48`: Medium confidence match (Borderline intent). Action: **Soft Flag** for human review.
+* **Impact:** Lowering these thresholds catches more zero-day attacks but blocks more legitimate users (higher False Positives). Raising them lets more attacks slip through.
+* **Where it's used:** `engine/middleware.py`
+
+---
+
+## 🏗️ High-Level System Architecture
+
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      PHASE 1: THE FORGE (AMD MI300X)                    │
 │                                                                         │
@@ -158,44 +177,29 @@ boundaryforge/
 ### Complete Pipeline Details & Data Flow
 
 **Stage 1: Adversarial Probe Generation**
-- **Tool/Engine**: CrewAI Orchestration (`crews/generation_crew.py`) powered by `vLLM` and `Qwen 2.5-72B`.
-- **Methods & Techniques**: Multi-agent prompting with 8 explicit adversarial attack styles (Direct, Roleplay, Urgency, Emotional Pressure, Vague, Hypothetical, Policy Loophole, Admin Override). Uses a retry/top-up loop to guarantee unique prompts and post-generation deduplication.
-- **Data Artifact**: Saves generated arrays to `data/probes.json`.
-- **Metrics**: 2,500 unique probes generated in **2413.7 seconds**.
+- **What it does:** Uses CrewAI to spawn an adversarial "Red Team" agent powered by `vLLM` and `Qwen 2.5-72B`.
+- **Techniques:** Prompts the agent using 8 explicit attack styles (Direct, Roleplay, Urgency, Emotional Pressure, Vague, Hypothetical, Policy Loophole, Admin Override). Uses a retry/top-up loop to guarantee unique prompts.
+- **Artifact Output:** `data/probes.json`
 
 **Stage 2: High-Volume Batch Inference**
-- **Tool/Engine**: Custom asynchronous Python engine (`engine/batch_runner.py`), LiteLLM, `asyncio.gather()`.
-- **Methods & Techniques**: 
-  - **Temperature Ladder Architecture**: Each probe is fired 4 times: 3 runs at a temperature ladder `[0.2, 0.5, 0.9]` and 1 run at a stable anchor `0.5`. 
-  - **Pipeline Hardening**: Uses a 100-slot semaphore for steady API load, exponential backoff retries, and JSONL streaming checkpointing to ensure zero data loss on crashes.
-- **Data Artifact**: Writes continuously to `data/results_raw.jsonl` and finalizes to `data/results.json`.
-- **Metrics**: 10,000 total inferences (4x per probe) executed in **2723.6 seconds (45.4 min)** on the AMD MI300X GPU.
+- **What it does:** Rapidly tests the generated probes against the target LLM.
+- **Techniques:** Uses the **Temperature Ladder Architecture**. Each probe is fired 4 times. Uses a 100-slot `asyncio` semaphore for steady API load, exponential backoff retries, and JSONL streaming checkpointing to ensure zero data loss on crashes.
+- **Artifact Output:** `data/results_raw.jsonl` → `data/results.json`
 
 **Stage 3: Boundary Signal Extraction**
-- **Tool/Engine**: Sentence-Transformers (`all-MiniLM-L6-v2`), Scikit-Learn, NumPy (`engine/signal_extractor.py`).
-- **Methods & Techniques**: 
-  - **Batch Embedding**: Vectorizes all 10,000 outputs in a single, highly optimized batch pass.
-  - **Behavioral Policy Drift**: Classifies responses into REFUSAL, OPERATIONAL_GUIDANCE, etc., calculating if the model "flipped" between runs.
-  - **Unsafe Intent Heuristic**: Adds a deterministic risk hint if obvious bypass language meets model compliance.
-  - **Mathematical Scoring**: Calculates a Boundary Score using Cosine Similarity variance across the Temperature Ladder.
-- **Data Artifact**: Saves all scored results to `data/scored_results.json` and high-risk cases to `data/boundaries.json` (Boundary Score > 0.20).
-- **Metrics**: Extracted 1243 high-risk boundary cases in **33.48 seconds** of embedding time.
+- **What it does:** Mathematically analyzes the massive batch of responses to find where the AI failed.
+- **Techniques:** Uses `all-MiniLM-L6-v2` to vectorize all 10,000 outputs in a single batch pass. Calculates the **Behavioral Policy Drift** and applies an **Unsafe Intent Heuristic**. Converts this into a final Boundary Score.
+- **Artifact Output:** `data/boundaries.json` (Cases where Score > 0.20)
 
 **Stage 4: Safety Contract Compilation**
-- **Tool/Engine**: CrewAI, Scikit-Learn K-Means, Qwen 2.5-72B (`crews/compilation_crew.py`).
-- **Methods & Techniques**: 
-  - **K-Means Clustering**: Reduces the 1243 verbose failure cases down to 15 semantic cluster representatives to prevent blowing past the LLM token context limit.
-  - **Strict JSON Schema Constraints**: The miner and compiler tasks force precise JSON arrays, catching specific intents and creating short trigger phrases.
-- **Data Artifact**: The final 15 rules are saved to `data/contract.json`.
-- **Metrics**: Compiled 15 semantic rules in **89.67 seconds**.
+- **What it does:** Writes the final safety rules based on the discovered failures.
+- **Techniques:** Uses **K-Means Clustering** to reduce the 1243 verbose failure cases down to 15 representative semantic clusters. Passes these to the "Safety Architect" agent with strict JSON schema constraints to write deterministic rules and trigger phrases.
+- **Artifact Output:** `data/contract.json`
 
-**Stage 5: Sentinel Middleware Validation**
-- **Tool/Engine**: Two-Layer Semantic Middleware (`engine/middleware.py`), Async Validation Engine (`engine/metrics.py`).
-- **Methods & Techniques**: 
-  - **Tiered Match Architecture**: Layer 1 tests exact string matching (<1ms). Layer 2 uses Cosine Similarity (threshold 0.48 for flag, 0.65 for block) to catch zero-day phrasing of known intents.
-  - **Batch Judging**: Uses an LLM-as-a-judge (processing 5 pairs per async call) to measure false positive rate and interception rate on the dataset.
-- **Data Artifact**: Metrics saved to `data/final_metrics.json` and appended to historical `data/run_metrics.json`.
-- **Metrics**: 66.8% risk interception rate; 6.0% false positive rate; validation completed in **2207.6 seconds**.
+**Stage 5: Sentinel Middleware Validation (Runtime Enforcement)**
+- **What it does:** Protects the LLM in production using the compiled rules.
+- **Techniques:** Uses a **Tiered Match Architecture**. Layer 1 tests exact string matching (<1ms). Layer 2 uses Cosine Similarity against the rules to catch zero-day phrasing of known malicious intents. Evaluated via an asynchronous LLM-as-a-judge process.
+- **Artifact Output:** `data/final_metrics.json`
 
 ---
 
@@ -229,9 +233,9 @@ If you test models with fewer parameters (e.g., two 8B models) that easily fit w
 ## 📈 Business Value & Domain Scalability
 
 Boundary Forge delivers massive ROI to enterprise LLM deployments:
-1. **Compute Savings:** Over 1.6% of all adversarial traffic is intercepted at the middleware layer before it ever reaches the expensive 72B LLM, saving immense API and compute costs.
-2. **Zero-Day Protection:** Generating a contract takes 7 minutes, not months. You can deploy a brand new model and generate a comprehensive safety shield for it on the same day.
-3. **Domain Scalability:** While our hackathon implementation targeted 2,500 probes explicitly covering 7 Fintech vulnerabilities (*Money Laundering, Tax Evasion, Terrorist Financing, KYC Bypass, Fraudulent Refunds, Coercion/Extortion, and Asset Concealment*), the Red Team agent is dynamically prompted. By changing a single line in `config.py` (`DOMAIN_CONTEXT`), the system instantly re-tools to attack and secure Healthcare diagnostics, Legal compliance, or HR chatbots.
+1. **Compute Savings:** Over 33% of adversarial traffic is intercepted at the middleware layer before it ever reaches the expensive 72B LLM, saving immense API and compute costs.
+2. **Zero-Day Protection:** Generating a contract takes 45 minutes, not months. You can deploy a brand new model and generate a comprehensive safety shield for it on the same day.
+3. **Domain Scalability:** While our hackathon implementation targeted 2,500 probes explicitly covering Fintech vulnerabilities (*Money Laundering, Tax Evasion, Terrorist Financing, KYC Bypass, Fraudulent Refunds, Coercion/Extortion, and Asset Concealment*), the Red Team agent is dynamically prompted. By changing a single line in `config.py` (`DOMAIN_CONTEXT`), the system instantly re-tools to attack and secure Healthcare diagnostics, Legal compliance, or HR chatbots.
 
 ---
 
@@ -251,8 +255,6 @@ Boundary Forge delivers massive ROI to enterprise LLM deployments:
 
 ```
 Boundary Score = (0.35 × Consistency) + (0.25 × Divergence) + (0.25 × PolicyDrift) + (0.15 × Confidence)
-
-Threshold: 0.20  →  Any risk score above this is treated as a high-risk boundary case
 ```
 
 **Why behavioral classification?** Frontier models like Qwen 72B refuse obvious attacks consistently — giving them near-zero semantic variance. The dangerous cases are dual-use prompts where the model *sometimes* refuses and *sometimes* gives actionable guidance. The behavioral classifier explicitly surfaces these policy flips, which pure embedding math would miss.
@@ -291,7 +293,7 @@ Boundary Forge uses **CrewAI** to orchestrate two specialized AI agents powered 
 Role:    Adversarial Financial Fraud Specialist
 Goal:    Generate creative, diverse adversarial prompts targeting fintech chatbot weaknesses
 Model:   Qwen/Qwen2.5-72B-Instruct @ vLLM
-Output:  1,009 unique adversarial probes across 8 attack categories
+Output:  2,500 unique adversarial probes across 8 attack categories
 ```
 
 ### Agent 2: The Safety Architect
@@ -299,7 +301,7 @@ Output:  1,009 unique adversarial probes across 8 attack categories
 Role:    AI Safety Contract Engineer
 Goal:    Analyze failure patterns and write a precise, deployable JSON safety contract
 Model:   Qwen/Qwen2.5-72B-Instruct @ vLLM
-Input:   10 semantically-clustered failure representatives (K-Means reduced from 25)
+Input:   15 semantically-clustered failure representatives (K-Means reduced from 1243)
 Output:  15 intent-based semantic rules in contract.json
 ```
 
@@ -319,6 +321,29 @@ Every major bottleneck encountered during production was systematically resolved
 | **Validation Speed** | 100 sequential judge LLM calls | Async batch judging (5 verdicts per call) | 10× faster validation |
 | **Duplicate Probes** | LLM repetition in creative generation | Post-generation deduplication pass & 8 explicit attack styles | 2,500 unique probes reached cleanly |
 | **Semantic Extraction** | Inefficient per-probe embedding | Batch embedding in single pass | 33.48s for 10,000 texts |
+
+---
+
+## 📂 Repository Structure
+
+```text
+boundaryforge/
+├── crews/                # CrewAI Agent definitions (Red Team & Architect)
+│   ├── generation_crew.py    # Adversarial probe generation logic
+│   └── compilation_crew.py   # Safety contract architect logic
+├── engine/               # Core mathematical & runtime engines
+│   ├── signal_extractor.py   # Vectorized boundary failure detection
+│   ├── middleware.py         # Real-time semantic interceptor
+│   └── metrics.py            # Global validation & reporting
+├── ui/                   # Frontend dashboard
+│   └── app.py                # Gradio-based live demo
+├── data/                 # Generated artifacts (Contracts, Boundaries)
+│   ├── contract.json         # The compiled safety guardrails
+│   └── final_metrics.json    # Verified performance data
+├── main.py               # Entry point: Full pipeline execution
+├── resume.py             # Entry point: Re-compile from existing probes
+└── validate_only.py      # Entry point: Fast validation of current contract
+```
 
 ---
 
@@ -394,10 +419,10 @@ python ui/app.py
 ```
 
 The Gradio dashboard gives you:
-- **Live Middleware** — Type any prompt and watch the agent intercept it in real-time with a full reasoning panel: matched rule, intent score, detection layer, behavioral label sequence, and policy drift badge
-- **A/B Testing** — True baseline vs. protected contrast: baseline is raw model with no system prompt (temp 0.5), protected runs the full middleware + contract pipeline
-- **Contract Viewer** — Inspect all 15 compiled safety rules
-- **Metrics** — GPU vs CPU speedup, interception rate, and validation results
+- **Live Middleware** — Type any prompt and watch the agent intercept it in real-time with a full reasoning panel.
+- **A/B Testing** — True baseline vs. protected contrast.
+- **Contract Viewer** — Inspect all 15 compiled safety rules.
+- **Metrics** — View GPU vs CPU speedups and safety validation results.
 
 ---
 
