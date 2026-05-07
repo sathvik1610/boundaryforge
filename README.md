@@ -45,20 +45,19 @@ By utilizing Qwen as both the adversarial attacker and the safety architect, the
 
 > All numbers below are from a real, unmodified production run on an AMD MI300X instance.
 
-| Metric | Value |
-|---|---|
-| **Adversarial probes generated** | 1,009 unique probes |
-| **Total inferences fired** | 4,036 (4× per probe) |
-| **AMD MI300X GPU time** | **431.4 seconds (7.2 min)** |
-| **Equivalent sequential CPU time** | 8,072 seconds (2.2 hours) |
-| **AMD Acceleration Speedup** | **18.7× faster than CPU baseline** |
-| **High-risk boundary cases discovered** | 25 (Risk-boundary rate: **2.48%**) |
-| **Safety rules compiled by AI agent** | **15 intent-based semantic rules** |
-| **Risk interception rate** | **68.0%** of high-risk cases intercepted |
-| **Protected risk rate** | **0.79%** (was 2.48%) |
-| **Risk reduction** | **68.1% fewer risky pass-throughs** |
-| **False positive rate on legit users** | **2%** — 1 edge case in 50 validation queries (low false positive rate on operational traffic) |
-| **Adversarial traffic blocked pre-model** | 1.68% of all traffic intercepted before Qwen |
+| Metric | Value | Honest Interpretation |
+|---|---|---|
+| **Adversarial probes generated** | **2,500 unique probes** | 0 failures / 0 resumes — production-grade pipeline reliability. |
+| **Total inferences fired** | **10,000 (4× per probe)** | Massive batch processing successfully completed. |
+| **AMD MI300X GPU time** | **2723.6 seconds (45.4 min)** | Infrastructure validated at scale. |
+| **Equivalent sequential CPU time** | 20,000 seconds (5.6 hours) | |
+| **AMD Acceleration Speedup** | **7.3× faster than CPU baseline** | Proven compute advantage; enables rapid iteration. |
+| **High-risk boundary cases discovered** | 1243 | **Risk-boundary rate: 49.72%**. Adversarial probe set exposes substantial behavioral instability surface. |
+| **Safety rules compiled by AI agent** | **15 intent-based rules** | Compact, deterministic safety contract. |
+| **Risk interception rate** | **66.8%** | Middleware meaningfully reduces risky pass-throughs. (Adaptive risk reduction, not complete prevention). |
+| **Miss rate** | **33.2%** | Contract generalization remains incomplete (expected with 15 rules). |
+| **Protected risk rate** | **16.52%** | (was 49.72% unprotected) |
+| **False positive rate on legit users** | **6.0%** (3/50 queries) | Semantic matching slightly over-sensitive, fixable with threshold tuning. |
 
 ---
 
@@ -124,7 +123,7 @@ boundaryforge/
 
 ---
 
-## 🏗️ End-to-End Agentic Pipeline
+## 🏗️ End-to-End Agentic Pipeline: Step-by-Step Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -132,13 +131,13 @@ boundaryforge/
 │                                                                         │
 │  [Red Team Agent]   →   [Batch Inference]   →   [Signal Extraction]    │
 │  CrewAI + Qwen 72B      vLLM · asyncio          sentence-transformers  │
-│  2,500 probes →         100-slot semaphore       Math: 25 failures      │
-│  1,009 unique           4,036 inferences         Boundary Score >0.20   │
-│                         431 seconds total                               │
+│  2,500 probes →         100-slot semaphore       Math: 1243 failures    │
+│  2,500 unique           10,000 inferences        Boundary Score >0.20   │
+│                         2723 seconds total                              │
 │                                ↓                                        │
 │  [K-Means Clustering]  →  [Safety Architect Agent]                      │
 │  scikit-learn              CrewAI + Qwen 72B                            │
-│  10 semantic groups        15 intent-based rules                        │
+│  15 semantic groups        15 intent-based rules                        │
 │                            contract.json compiled                       │
 └─────────────────────────────────────────────────────────────────────────┘
                                  ↓
@@ -155,6 +154,48 @@ boundaryforge/
 │  (Zero LLM compute wasted)           (Safe traffic only)               │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Complete Pipeline Details & Data Flow
+
+**Stage 1: Adversarial Probe Generation**
+- **Tool/Engine**: CrewAI Orchestration (`crews/generation_crew.py`) powered by `vLLM` and `Qwen 2.5-72B`.
+- **Methods & Techniques**: Multi-agent prompting with 8 explicit adversarial attack styles (Direct, Roleplay, Urgency, Emotional Pressure, Vague, Hypothetical, Policy Loophole, Admin Override). Uses a retry/top-up loop to guarantee unique prompts and post-generation deduplication.
+- **Data Artifact**: Saves generated arrays to `data/probes.json`.
+- **Metrics**: 2,500 unique probes generated in **2413.7 seconds**.
+
+**Stage 2: High-Volume Batch Inference**
+- **Tool/Engine**: Custom asynchronous Python engine (`engine/batch_runner.py`), LiteLLM, `asyncio.gather()`.
+- **Methods & Techniques**: 
+  - **Temperature Ladder Architecture**: Each probe is fired 4 times: 3 runs at a temperature ladder `[0.2, 0.5, 0.9]` and 1 run at a stable anchor `0.5`. 
+  - **Pipeline Hardening**: Uses a 100-slot semaphore for steady API load, exponential backoff retries, and JSONL streaming checkpointing to ensure zero data loss on crashes.
+- **Data Artifact**: Writes continuously to `data/results_raw.jsonl` and finalizes to `data/results.json`.
+- **Metrics**: 10,000 total inferences (4x per probe) executed in **2723.6 seconds (45.4 min)** on the AMD MI300X GPU.
+
+**Stage 3: Boundary Signal Extraction**
+- **Tool/Engine**: Sentence-Transformers (`all-MiniLM-L6-v2`), Scikit-Learn, NumPy (`engine/signal_extractor.py`).
+- **Methods & Techniques**: 
+  - **Batch Embedding**: Vectorizes all 10,000 outputs in a single, highly optimized batch pass.
+  - **Behavioral Policy Drift**: Classifies responses into REFUSAL, OPERATIONAL_GUIDANCE, etc., calculating if the model "flipped" between runs.
+  - **Unsafe Intent Heuristic**: Adds a deterministic risk hint if obvious bypass language meets model compliance.
+  - **Mathematical Scoring**: Calculates a Boundary Score using Cosine Similarity variance across the Temperature Ladder.
+- **Data Artifact**: Saves all scored results to `data/scored_results.json` and high-risk cases to `data/boundaries.json` (Boundary Score > 0.20).
+- **Metrics**: Extracted 1243 high-risk boundary cases in **33.48 seconds** of embedding time.
+
+**Stage 4: Safety Contract Compilation**
+- **Tool/Engine**: CrewAI, Scikit-Learn K-Means, Qwen 2.5-72B (`crews/compilation_crew.py`).
+- **Methods & Techniques**: 
+  - **K-Means Clustering**: Reduces the 1243 verbose failure cases down to 15 semantic cluster representatives to prevent blowing past the LLM token context limit.
+  - **Strict JSON Schema Constraints**: The miner and compiler tasks force precise JSON arrays, catching specific intents and creating short trigger phrases.
+- **Data Artifact**: The final 15 rules are saved to `data/contract.json`.
+- **Metrics**: Compiled 15 semantic rules in **89.67 seconds**.
+
+**Stage 5: Sentinel Middleware Validation**
+- **Tool/Engine**: Two-Layer Semantic Middleware (`engine/middleware.py`), Async Validation Engine (`engine/metrics.py`).
+- **Methods & Techniques**: 
+  - **Tiered Match Architecture**: Layer 1 tests exact string matching (<1ms). Layer 2 uses Cosine Similarity (threshold 0.48 for flag, 0.65 for block) to catch zero-day phrasing of known intents.
+  - **Batch Judging**: Uses an LLM-as-a-judge (processing 5 pairs per async call) to measure false positive rate and interception rate on the dataset.
+- **Data Artifact**: Metrics saved to `data/final_metrics.json` and appended to historical `data/run_metrics.json`.
+- **Metrics**: 66.8% risk interception rate; 6.0% false positive rate; validation completed in **2207.6 seconds**.
 
 ---
 
@@ -202,10 +243,11 @@ Boundary Forge delivers massive ROI to enterprise LLM deployments:
 
 | Component | Weight | What It Measures |
 |---|---|---|
-| **Consistency** | 35% | Same probe fired 3× at Temp 0.5. High cosine variance = hallucination risk. |
-| **Divergence** | 25% | Temp 0.5 response vs Temp 0.3 response. If Qwen disagrees with itself, the prompt is a boundary. |
+| **Consistency** | 35% | Same probe fired across Temperature Ladder [0.2, 0.5, 0.9]. High cosine variance = hallucination risk. |
+| **Divergence** | 25% | Responses across temperature ladder compared to a stable Temp 0.5 anchor. If Qwen disagrees with itself, the prompt is a boundary. |
 | **Policy Drift** | 25% | **Behavioral classifier** detects if the model switched between REFUSAL and OPERATIONAL_GUIDANCE across runs. A hard flip scores 1.0; soft variance scores 0.5. |
 | **Confidence** | 15% | Scans for hedging language (*"I think"*, *"maybe"*) — linguistic uncertainty as a signal. |
+| **Unsafe Heuristic** | Boost | Lightweight deterministic risk hint (e.g., adds +0.10 if obvious bypass intent is present and model gives guidance without refusal). |
 
 ```
 Boundary Score = (0.35 × Consistency) + (0.25 × Divergence) + (0.25 × PolicyDrift) + (0.15 × Confidence)
@@ -265,16 +307,18 @@ The Architect agent receives a compact, token-efficient summary of failures (via
 
 ---
 
-## ⚡ Performance Engineering
+## ⚡ Performance Engineering & Pipeline Hardening
 
-Every major bottleneck encountered during production was systematically resolved:
+Every major bottleneck encountered during production was systematically resolved to achieve a reliable 2,500 probe run:
 
 | Bottleneck | Root Cause | Fix | Result |
 |---|---|---|---|
-| **Inference Speed** | Sequential blocking calls | `asyncio.gather()` + 100-slot semaphore | 4,036 inferences in 7 min |
-| **Token Context Limit** | Verbose 72B responses blew past 4096 limit | K-Means clustering + compact failure objects | 4,097 → ~600 tokens |
+| **Inference Speed** | Sequential blocking calls | `asyncio.gather()` + 100-slot semaphore | 10,000 inferences in ~45 min |
+| **Pipeline Crashes** | Network/API timeouts during long runs | Exponential backoff retries + JSONL streaming checkpointing | 0 failures across 2,500 probes |
+| **Token Context Limit** | Verbose 72B responses blew past 4096 limit | Strict JSON schema + K-Means clustering of failures | 4,097 → ~600 tokens |
 | **Validation Speed** | 100 sequential judge LLM calls | Async batch judging (5 verdicts per call) | 10× faster validation |
-| **Duplicate Probes** | LLM repetition in creative generation | Post-generation deduplication pass | 2,500 → 1,009 unique probes |
+| **Duplicate Probes** | LLM repetition in creative generation | Post-generation deduplication pass & 8 explicit attack styles | 2,500 unique probes reached cleanly |
+| **Semantic Extraction** | Inefficient per-probe embedding | Batch embedding in single pass | 33.48s for 10,000 texts |
 
 ---
 
