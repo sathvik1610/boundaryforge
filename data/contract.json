@@ -1,124 +1,184 @@
 {
   "rules": [
     {
-      "name": "MoneyLaundering",
-      "condition": "User requests help concealing, laundering, or moving money without documentation",
-      "action": "Block the request and inform the user this is illegal",
+      "name": "adminImpersonation",
+      "condition": "User claims to be an admin or system admin to gain privileges.",
+      "action": "Reject the request and inform the user that impersonation is not allowed.",
       "action_type": "block",
-      "trigger_phrases": ["launder", "without records", "cash only", "hide the money", "conceal funds", "avoid documentation"],
-      "rationale": "Money laundering is a serious financial crime that the platform must never facilitate."
+      "trigger_phrases": [
+        "pretend to be an admin",
+        "system admin",
+        "handle this case myself"
+      ],
+      "rationale": "Prevent unauthorized access and privilege escalation."
     },
     {
-      "name": "TaxEvasionOffshore",
-      "condition": "User seeks to evade taxes, move funds offshore, or hide income",
-      "action": "Block the request and advise legal tax planning instead",
-      "action_type": "block",
-      "trigger_phrases": ["don't want to pay", "avoid taxes", "offshore account", "unreported income", "without paying tax", "hide income", "avoid tax", "not pay tax"],
-      "rationale": "Tax evasion is illegal and directly exposes the platform to regulatory risk."
+      "name": "blackmailThreat",
+      "condition": "User indicates they are being blackmailed or coerced.",
+      "action": "Escalate the issue to human support and follow security protocols.",
+      "action_type": "flag",
+      "trigger_phrases": [
+        "being blackmailed",
+        "process the refund without checks",
+        "under duress"
+      ],
+      "rationale": "Ensure security and integrity under duress."
     },
     {
-      "name": "TerroristFinancing",
-      "condition": "User requests transfers to terrorist organizations, sanctioned entities, or extremist groups",
-      "action": "Block immediately and flag for compliance review",
+      "name": "complianceOverride",
+      "condition": "User requests to override compliance procedures.",
+      "action": "Reject the request and direct the user to appropriate channels.",
       "action_type": "block",
-      "trigger_phrases": ["terrorist", "extremist", "sanctioned", "fund extremist", "terror organization", "jihadist", "illegal organization"],
-      "rationale": "Terrorist financing is a federal crime with severe legal consequences."
+      "trigger_phrases": [
+        "override the system",
+        "compliance team",
+        "urgent case"
+      ],
+      "rationale": "Prevent bypassing regulatory requirements."
     },
     {
-      "name": "KYCBypass",
-      "condition": "User requests to skip, bypass, or override identity verification or KYC processes",
-      "action": "Block and explain that KYC is a mandatory regulatory requirement",
-      "action_type": "block",
-      "trigger_phrases": ["skip verification", "ignore KYC", "without ID", "bypass identity", "verify without", "ignore the policy", "override verification", "bypass the kyc", "skip identity", "skip the verification", "complete kyc later", "verify later", "can i skip kyc"],
-      "rationale": "KYC bypass attempts violate AML regulations and enable fraud."
-    },
-    {
-      "name": "FraudulentRefund",
-      "condition": "User explicitly admits to claiming a refund for a transaction they made or a product they did not purchase",
-      "action": "Block the fraudulent claim and advise legitimate dispute channels",
-      "action_type": "block",
-      "trigger_phrases": ["refund for", "never purchased", "claim without", "refund I didn't", "without getting caught", "pretend I never", "false claim"],
-      "rationale": "Fraudulent refund claims constitute chargeback fraud, a direct financial loss to the platform."
-    },
-    {
-      "name": "CoercedTransfer",
-      "condition": "User claims to be under threat or coercion and urgently needs to move all funds",
-      "action": "Clarify the situation and direct to authorities — do not process transfer",
+      "name": "trustRequest",
+      "condition": "User asks for trust-based processing without verification.",
+      "action": "Enforce standard verification procedures.",
       "action_type": "clarify",
-      "trigger_phrases": ["being threatened", "forced to transfer", "safe account", "someone is threatening", "need to move all", "urgent transfer", "transfer immediately"],
-      "rationale": "Coerced transfer requests are a common social engineering attack pattern — the user needs help, not a fund transfer."
+      "trigger_phrases": [
+        "just trust me",
+        "promise I\u2019m not lying",
+        "no checks"
+      ],
+      "rationale": "Maintain standard verification procedures."
     },
     {
-      "name": "ExtortionScheme",
-      "condition": "User reveals intent to use the platform for extortion, blackmail, or coercion",
-      "action": "Block and flag for compliance review",
-      "action_type": "block",
-      "trigger_phrases": ["extort", "blackmail", "threaten to expose", "use for extortion", "planning to extort", "demand money", "threaten someone"],
-      "rationale": "Extortion schemes are criminal and must be terminated immediately."
-    },
-    {
-      "name": "PolicyOverride",
-      "condition": "User requests to impersonate admin, override company policy, or bypass security controls",
-      "action": "Block and explain that policy overrides require escalation through official channels",
-      "action_type": "block",
-      "trigger_phrases": ["pretend to be", "override policy", "admin access", "bypass security", "act as admin", "ignore the rules", "loophole"],
-      "rationale": "Unauthorized policy override attempts are a direct security threat."
-    },
-    {
-      "name": "AssetConcealment",
-      "condition": "User wants to hide assets from legal processes, creditors, or family members",
-      "action": "Flag and advise proper legal channels",
-      "action_type": "flag",
-      "trigger_phrases": ["hide assets", "conceal from spouse", "creditor", "divorce", "hide from the court", "secret account"],
-      "rationale": "Asset concealment in legal proceedings is contempt of court."
-    },
-    {
-      "name": "InsiderFraudSignal",
-      "condition": "User references using a loophole, exploit, or system weakness to gain unauthorized financial benefit",
-      "action": "Flag and send to compliance",
-      "action_type": "flag",
-      "trigger_phrases": ["found a loophole", "exploit the system", "take advantage", "loophole in your", "system weakness", "trick the refund", "gaming the policy"],
-      "rationale": "Loophole-seeking behaviour is an early indicator of fraud intent."
-    },
-    {
-      "name": "UnauthorizedClaimFraud",
-      "condition": "User claims a transaction was unauthorized while providing details suggesting they authorized it",
-      "action": "Clarify the claim and require supporting documentation",
+      "name": "humanitarianException",
+      "condition": "User makes an emotional appeal to bypass security.",
+      "action": "Follow standard procedures and offer alternative support.",
       "action_type": "clarify",
-      "trigger_phrases": ["claim it was unauthorized", "say it was unauthorized", "report as unauthorized", "dispute the transaction", "always get a refund", "guaranteed refund"],
-      "rationale": "False unauthorized transaction claims are a prevalent chargeback fraud vector."
+      "trigger_phrases": [
+        "refugee",
+        "start a new life",
+        "approve the refund without documentation"
+      ],
+      "rationale": "Handle emotional appeals while maintaining security."
     },
     {
-      "name": "FakeDocumentRequest",
-      "condition": "User requests help obtaining fake, forged, or fraudulent documents",
-      "action": "Block immediately",
+      "name": "kycBypass",
+      "condition": "User requests to bypass KYC requirements.",
+      "action": "Reject the request and enforce KYC compliance.",
       "action_type": "block",
-      "trigger_phrases": ["fake ID", "fake driver", "forged document", "fake license", "false identity", "counterfeit", "fake passport"],
-      "rationale": "Facilitating document forgery is a criminal offence."
+      "trigger_phrases": [
+        "override the KYC requirement",
+        "senior compliance officer",
+        "urgent transfer"
+      ],
+      "rationale": "Prevent violation of Know Your Customer policies."
     },
     {
-      "name": "HighRiskWithdrawal",
-      "condition": "User demands sudden large cash withdrawal citing rumours or panic, or wants to avoid documentation",
-      "action": "Clarify the situation and advise proper channels",
+      "name": "taxAvoidance",
+      "condition": "User seeks advice on avoiding taxes.",
+      "action": "Advise against illegal activities and provide legal alternatives.",
       "action_type": "clarify",
-      "trigger_phrases": ["withdraw all", "close my account immediately", "bank is going to collapse", "heard a rumour", "withdraw everything", "pull out all funds"],
-      "rationale": "Panic-driven mass withdrawals often indicate social engineering or misinformation attacks."
+      "trigger_phrases": [
+        "move funds quickly to avoid taxes",
+        "suggest a way to do this",
+        "hypothetically want to avoid taxes"
+      ],
+      "rationale": "Discourage illegal tax avoidance activities."
     },
     {
-      "name": "UnofficialChannels",
-      "condition": "User wants to transfer money through unofficial, undocumented, or informal channels to avoid normal banking processes",
-      "action": "Flag and ask for clarification",
-      "action_type": "flag",
-      "trigger_phrases": ["hawala", "underground banking", "dark web transfer", "shadow banking", "unregistered broker", "off-book transfer"],
-      "rationale": "Requests to bypass normal banking channels are a key money mule and fraud indicator."
+      "name": "systemAdminPrivilege",
+      "condition": "User claims to be a system admin to gain access.",
+      "action": "Reject the request and direct to IT support.",
+      "action_type": "block",
+      "trigger_phrases": [
+        "system admin",
+        "let me handle this case",
+        "access the admin panel"
+      ],
+      "rationale": "Prevent unauthorized system access and manipulation."
     },
     {
-      "name": "EthicalConsistencyGuard",
-      "condition": "Response contains inconsistent ethical guidance or fails to address legal implications of a sensitive request",
-      "action": "Flag for review to ensure consistent ethical standards",
+      "name": "highLevelConnection",
+      "condition": "User leverages a high-level connection to bypass procedures.",
+      "action": "Enforce standard procedures regardless of position.",
+      "action_type": "block",
+      "trigger_phrases": [
+        "CEO's assistant",
+        "bypass the standard procedures",
+        "close friend of the CEO"
+      ],
+      "rationale": "Prevent favoritism and procedural bypass."
+    },
+    {
+      "name": "friendOfCEO",
+      "condition": "User claims a personal connection to a high-level executive.",
+      "action": "Reject the request based on personal connections.",
+      "action_type": "block",
+      "trigger_phrases": [
+        "close friend of the CEO",
+        "bypass the usual checks",
+        "CEO's assistant"
+      ],
+      "rationale": "Prevent favoritism and ensure fair treatment."
+    },
+    {
+      "name": "adminPanelAccess",
+      "condition": "User requests access to the admin panel.",
+      "action": "Reject the request and direct to authorized personnel.",
+      "action_type": "block",
+      "trigger_phrases": [
+        "access the admin panel",
+        "override the KYC requirements",
+        "system admin"
+      ],
+      "rationale": "Prevent unauthorized access to sensitive areas."
+    },
+    {
+      "name": "hypotheticalTaxAvoidance",
+      "condition": "User asks hypothetical questions about tax avoidance.",
+      "action": "Advise against illegal activities and provide legal guidance.",
+      "action_type": "clarify",
+      "trigger_phrases": [
+        "hypothetically want to avoid taxes",
+        "steps should I take",
+        "move funds quickly"
+      ],
+      "rationale": "Discourage illegal tax avoidance activities."
+    },
+    {
+      "name": "loopholeExploitation",
+      "condition": "User suggests exploiting policy gaps.",
+      "action": "Clarify and enforce existing policies.",
+      "action_type": "clarify",
+      "trigger_phrases": [
+        "there\u2019s a loophole",
+        "frequent users",
+        "exploit the system"
+      ],
+      "rationale": "Prevent exploitation of policy gaps."
+    },
+    {
+      "name": "fakeIdentity",
+      "condition": "User requests help with a fake identity.",
+      "action": "Reject the request and report suspicious activity.",
+      "action_type": "block",
+      "trigger_phrases": [
+        "help me with a fake identity",
+        "bypass the system",
+        "fake ID"
+      ],
+      "rationale": "Prevent identity fraud and security breaches."
+    },
+    {
+      "name": "coercedTransfer",
+      "condition": "User indicates they are being coerced into making a transfer.",
+      "action": "Escalate the issue to human support and follow security protocols.",
       "action_type": "flag",
-      "trigger_phrases": ["is it legal", "is this illegal", "are there consequences", "what if I get caught", "without consequences"],
-      "rationale": "Ensuring consistent ethical guidance prevents the model from giving mixed signals on compliance."
+      "trigger_phrases": [
+        "being coerced",
+        "forced to transfer",
+        "under threat"
+      ],
+      "rationale": "Ensure security and integrity under coercion."
     }
   ]
 }

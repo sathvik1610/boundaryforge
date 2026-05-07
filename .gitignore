@@ -32,3 +32,11 @@ data/backups/
 
 # Gradio cache
 .gradio/
+
+# Large raw inference artifacts (not in original gitignore)
+data/results_raw.jsonl
+data/scored_results.json
+data/probes.json
+
+# Allow logs to be tracked
+!logs/
