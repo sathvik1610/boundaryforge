@@ -194,8 +194,8 @@ graph TD
 | **Async Execution Throughput** | **10,000 inferences in ~45 mins** | Demonstrates the high efficiency of parallel asyncio and vLLM continuous batching on the MI300X. |
 | **High-Risk Boundaries Mined** | **1,243 cases (49.72%)** | Successfully isolates model instability zones. Note: this rate is highly sensitive to the liberal `0.20` Boundary Score threshold in `config.py`. |
 | **Safety Rules Compiled** | **15 Intent-Based Rules** | Delivers a highly compressed, efficient contract covering representative mined vulnerability vectors. |
-| **Training Boundary Coverage** | **66.8% Interception Rate** | Meaningfully reduces risk by neutralizing two-thirds of dangerous attacks at the middleware layer. |
-| **False Positive Rate** | **6.0% (3 out of 50)** | Suggests high precision, indicating legitimate financial inquiries are rarely over-blocked (requires scaling to larger benchmarks to confirm). |
+| **Training Boundary Coverage** | **66.8% Interception Rate** | Meaningfully reduces risk by neutralizing two-thirds of dangerous attacks. Note: Interception coverage is artificially capped by the 4096 context token limit, which restricted the Safety Architect to processing only 15 clustered failure centroids. Higher limits yield higher coverage. |
+| **False Positive Rate** | **6.0% (3 out of 50)** | Suggests high precision for operational traffic. Note: The 50-query validation set was bounded by CrewAI synthetic generation timeouts and API rate limits during the hackathon; this requires scaling to larger benchmarks to fully confirm. |
 
 > **⚠️ Note on Variability:** These metrics represent a specific production validation run on a single AMD Instinct MI300X using Qwen 2.5-72B-Instruct. In practice, performance metrics (execution throughput, average latency) and safety benchmarks (boundary mining rates, middleware interception rates, and false positives) will vary depending on the chosen hardware accelerator, server configuration, model family/size, and domain parameters.
 
